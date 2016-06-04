@@ -5,8 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-#include <cuda_runtime_api.h>
-#include <cuda.h>
+#include "kernels.cuh"
 using namespace cimg_library;
 #ifndef idx3
 #define idx3(x,y,z,x_size,y_size) ((x) + ((y)+(y_size)*(z))*(x_size))

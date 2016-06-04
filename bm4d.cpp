@@ -1,14 +1,5 @@
 #include "bm4d.h"
 
-__global__ void simple_kernel(float *img, const int width, const int height, const int depth){
-  int x = blockDim.x * blockIdx.x + threadIdx.x;
-  int y = blockDim.y * blockIdx.y + threadIdx.y;
-  int z = blockDim.z * blockIdx.z + threadIdx.z;
-  if( x >= width || y >= height || z >= depth )
-    return;
-  img[x + (y+height*z)*width] += 10;
-}
-
 std::vector<unsigned char> BM4D::run_first_step(const std::vector<unsigned char> &noisy_volume, const int &width, int &height, int &depth){
   int v_size = width*height*depth;
   std::vector<unsigned char> result(v_size);
