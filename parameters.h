@@ -13,6 +13,7 @@ struct Parameters{
   float sigma=25.0;
   float noise_sigma=25.0;
   bool  add_noise_ = false;
+  int gpu_device=0;
 };
 
 void inline read_parameters(int argc, char *argv[], Parameters &p){

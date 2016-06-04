@@ -1,9 +1,9 @@
 #pragma once
+#include <iostream>
+#include <vector>
 #include <cuda_runtime_api.h>
 #include <cuda.h>
+#include "helper_cuda.h"
+#include "stdio.h"
 
-__global__ void simple_kernel(float *img, const int width, const int height, const int depth);
-
-void inline run_simple_kernel(){
-
-}
+void wrapper_simple_kernel(std::vector<float> &h_result,int width, int height, int depth);
