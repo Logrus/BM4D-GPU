@@ -17,13 +17,13 @@ __global__ void simple_kernel(float *img, const int width, const int height, con
     img[x+y*width+x*height*width] = 0;
 }
 
-void wrapper_simple_kernel(std::vector<float> &h_result,int width, int height, int depth){
+void wrapper_simple_kernel(const std::vector<float> &h_result, std::vector<float> &out, int width, int height, int depth){
   int v_size = width*height*depth;
 
   float *d_noisy_volume;
   // Allocate device memory
   checkCudaErrors(cudaMalloc((void**) &d_noisy_volume, sizeof(float)*v_size));
-  checkCudaErrors(cudaMemcpy((void*) d_noisy_volume, (void*)h_result.data(), sizeof(float)*v_size, cudaMemcpyHostToDevice));
+  //checkCudaErrors(cudaMemcpy((void*) d_noisy_volume, (void*)h_result.data(), sizeof(float)*v_size, cudaMemcpyHostToDevice));
 
 
   int nDevices;
@@ -65,17 +65,12 @@ void wrapper_simple_kernel(std::vector<float> &h_result,int width, int height, i
 
   dim3 grid(xb,yb,zb);
 
-  for(int k=0;k<depth;k++)
-  for(int j=0;j<height;j++)
-  for(int i=0;i<width;i++)
-    d_noisy_volume[x+y*width+x*height*width] = 0;
-
   //simple_kernel<<<1,1>>>(d_noisy_volume,width,height,depth);
-  //cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
   //checkCudaErrors(cudaGetLastError());
 
   // Copy denoised image back to host
-  checkCudaErrors(cudaMemcpy((void*)h_result.data(), (void*) d_noisy_volume, sizeof(float)*v_size, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaMemcpy((void*)out.data(), (void*) d_noisy_volume, sizeof(float)*v_size, cudaMemcpyDeviceToHost));
   // Cleanup
   checkCudaErrors(cudaFree(d_noisy_volume));
 }

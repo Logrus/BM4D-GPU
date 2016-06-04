@@ -25,6 +25,6 @@ int main(int argc, char *argv[]){
   denoised_image = filter.run_first_step(noisy_image, width, height, depth);
 
   // Save image
-  CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1);
-  test.display();
+  //CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1);
+  //test.display();
 }

@@ -4,14 +4,17 @@ std::vector<unsigned char> BM4D::run_first_step(const std::vector<unsigned char>
   int v_size = width*height*depth;
   std::vector<unsigned char> result(v_size, 100);
   std::vector<float> h_result(v_size, 100);
+  std::vector<float> out(v_size, 100);
 
   // Convert image to float
-  for(int z=0;z<depth;++z)
-    for(int y=0;y<height;++y)
-      for(int x=0;x<width;++x)
-        h_result[idx3(x,y,z,width,height)]=static_cast<float>(noisy_volume[idx3(x,y,z,width,height)]);
+  // for(int z=0;z<depth;++z)
+  //   for(int y=0;y<height;++y)
+  //     for(int x=0;x<width;++x)
+  //       h_result[idx3(x,y,z,width,height)]=static_cast<float>(noisy_volume[idx3(x,y,z,width,height)]);
 
-  wrapper_simple_kernel(h_result, width, height, depth);
+  wrapper_simple_kernel(h_result, out, width, height, depth);
+
+  CImg<float> test(out.data(), width, height, depth, 1); test.display();
 
   // Do block matching
   //run_block_matching();
