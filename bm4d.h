@@ -13,14 +13,12 @@ using namespace cimg_library;
 class BM4D {
 private:
   // Main variables
-  std::vector<unsigned char> noisy_volume;
-  std::vector<unsigned char> base_volume;
-
-  std::vector<float> working_image;
+  std::vector<uchar> noisy_volume;
+  std::vector<uchar> base_volume;
 
   // Device variables
-  float *d_noisy_volume;
-  float *d_denoised_volume;
+  uchar *d_noisy_volume;
+  uchar *d_denoised_volume;
   int width, height, depth, size;
 
   // Parameters for launching kernels
@@ -36,7 +34,7 @@ private:
 
 public:
   inline BM4D(Parameters p,
-    const std::vector<unsigned char> &in_noisy_volume,
+    const std::vector<uchar> &in_noisy_volume,
     const int &width,
     const int &height,
     const int &depth
@@ -53,13 +51,17 @@ public:
     checkCudaErrors(cudaGetDeviceProperties(&d_prop, device));
 
     // Memory allocation
-    checkCudaErrors(cudaMalloc((void**) &d_noisy_volume, sizeof(float)*size));
-    checkCudaErrors(cudaMalloc((void**) &d_denoised_volume, sizeof(float)*size));
+    checkCudaErrors(cudaMalloc((void**) &d_noisy_volume, sizeof(uchar)*size));
+    std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_noisy_volume"<<std::endl;
+    checkCudaErrors(cudaMalloc((void**) &d_denoised_volume, sizeof(uchar)*size));
+    std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_denoised_volume"<<std::endl;
   };
   inline ~BM4D(){
     // Cleanup
     checkCudaErrors(cudaFree(d_noisy_volume));
+    std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_noisy_volume"<<std::endl;
     checkCudaErrors(cudaFree(d_denoised_volume));
+    std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_denoised_volume"<<std::endl;
   };
 
   std::vector<unsigned char> run_first_step();

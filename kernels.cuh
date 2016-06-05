@@ -9,8 +9,9 @@
 #include "stdio.h"
 #include "parameters.h"
 
+typedef unsigned char uchar;
 
-void run_block_matching(float *d_noisy_volume,
+void run_block_matching(uchar *d_noisy_volume,
                       const uint3 im_size,
                       const Parameters params);
 
