@@ -1,23 +1,21 @@
 #include "bm4d.h"
 
-std::vector<unsigned char> BM4D::run_first_step(const std::vector<unsigned char> &noisy_volume, const int &width, int &height, int &depth){
-  int v_size = width*height*depth;
-  std::vector<unsigned char> result(v_size, 100);
-  std::vector<float> h_result(v_size, 100);
-  std::vector<float> out(v_size, 100);
+std::vector<unsigned char> BM4D::run_first_step()
+{
+  working_image.resize(size);
+  working_image.assign(noisy_volume.begin(), noisy_volume.end());
 
-  // Convert image to float
-  // for(int z=0;z<depth;++z)
-  //   for(int y=0;y<height;++y)
-  //     for(int x=0;x<width;++x)
-  //       h_result[idx3(x,y,z,width,height)]=static_cast<float>(noisy_volume[idx3(x,y,z,width,height)]);
+  Stopwatch copyingtodevice(true);
+  // working_image -> d_noisy_volume
+  copy_image_to_device();
+  copyingtodevice.stop(); std::cout<<"Copying to device took: "<<copyingtodevice.getSeconds()<<std::endl;
 
-  wrapper_simple_kernel(h_result, out, width, height, depth);
+  //CImg<float> test(working_image.data(), width, height, depth, 1); test.display();
 
-  CImg<float> test(out.data(), width, height, depth, 1); test.display();
-
+  Stopwatch blockmatching(true);
   // Do block matching
-  //run_block_matching();
+  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), params);
+  blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together
 
@@ -33,13 +31,19 @@ std::vector<unsigned char> BM4D::run_first_step(const std::vector<unsigned char>
   // Aggregate
   //run_aggregation();
 
-  // Convert image to unsigned char
-  for(int z=0;z<depth;++z)
-    for(int y=0;y<height;++y)
-      for(int x=0;x<width;++x)
-        result[idx3(x,y,z,width,height)]=static_cast<unsigned char>(h_result[idx3(x,y,z,width,height)]);
+  // d_noisy_volume -> working_image
+  Stopwatch copyingtohost(true);
+  copy_image_to_host();
+  copyingtohost.stop(); std::cout<<"Copying to host took: "<<copyingtohost.getSeconds()<<std::endl;
+
+  noisy_volume.assign(working_image.begin(), working_image.end());
+  return noisy_volume;
+}
 
 
-
-  return result;
+void BM4D::copy_image_to_device(){
+  checkCudaErrors(cudaMemcpy((void*)d_noisy_volume, (void*)working_image.data(), sizeof(float)*size, cudaMemcpyHostToDevice));
+}
+void BM4D::copy_image_to_host(){
+  checkCudaErrors(cudaMemcpy((void*)working_image.data(), (void*) d_denoised_volume, sizeof(float)*size, cudaMemcpyDeviceToHost));
 }
