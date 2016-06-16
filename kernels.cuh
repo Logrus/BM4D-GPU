@@ -8,6 +8,9 @@
 #include "helper_cuda.h"
 #include "stdio.h"
 #include "parameters.h"
+#ifndef idx3
+#define idx3(x,y,z,x_size,y_size) ((x) + ((y)+(y_size)*(z))*(x_size))
+#endif
 
 typedef unsigned char uchar;
 typedef unsigned int uint;

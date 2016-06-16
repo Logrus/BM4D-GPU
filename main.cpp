@@ -31,5 +31,5 @@ int main(int argc, char *argv[]){
 
 
   // Save image
-  CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
+  //CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
 }

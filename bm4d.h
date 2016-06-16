@@ -55,15 +55,23 @@ public:
     // Memory allocation
     checkCudaErrors(cudaMalloc((void**) &d_noisy_volume, sizeof(uchar)*size));
     std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_noisy_volume"<<std::endl;
-    checkCudaErrors(cudaMalloc((void**) &d_denoised_volume, sizeof(uchar)*size));
-    std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_denoised_volume"<<std::endl;
+    //checkCudaErrors(cudaMalloc((void**) &d_denoised_volume, sizeof(uchar)*size));
+    //std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_denoised_volume"<<std::endl;
+	checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN * 1024)));
+	std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*1024) << " bytes for d_stacks" << std::endl;
+	checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint3float1)*(1024)));
+	std::cout << "Allocated " << sizeof(uint3float1)*(1024) << " bytes for d_nstacks" << std::endl;
   };
   inline ~BM4D(){
     // Cleanup
     checkCudaErrors(cudaFree(d_noisy_volume));
     std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_noisy_volume"<<std::endl;
-    checkCudaErrors(cudaFree(d_denoised_volume));
-    std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_denoised_volume"<<std::endl;
+    //checkCudaErrors(cudaFree(d_denoised_volume));
+    //std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_denoised_volume"<<std::endl;
+	checkCudaErrors(cudaFree(d_stacks));
+	//std::cout << "Cleaned up " << sizeof(uint3float1)*(params.maxN*size) << " bytes of d_stacks" << std::endl;
+	checkCudaErrors(cudaFree(d_nstacks));
+	//std::cout << "Cleaned up " << sizeof(uint3float1)*(size) << " bytes of d_nstacks" << std::endl;
   };
 
   std::vector<unsigned char> run_first_step();

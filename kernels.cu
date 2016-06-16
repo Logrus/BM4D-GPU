@@ -91,12 +91,12 @@ __global__ void k_block_matching(uchar *img,
   float w = dist(img, size, ref, cmp, k);
   if (w < th){
 	  add_stack(
-		  &d_stacks[maxN * idx2(tid, wid, warpSize)],
-		  &d_nstacks[idx2(tid, wid, warpSize)],
+		  &d_stacks[maxN * idx3(cmp.x, cmp.y, cmp.z, size.x, size.y)],
+		  &d_nstacks[idx3(cmp.x, cmp.y, cmp.z, size.x, size.y)],
 		  uint3float1(cmp.x, cmp.y, cmp.z, w),
 		  maxN
 		  );
-	  printf("Diff %f\n", w);
+	  printf("Stack ref: %d %d %d, cmp: %d %d %d, diff %f\n", ref.x, ref.y, ref.z, cmp.x, cmp.y, cmp.z, w);
   }
   //printf("%d", x+(y+z*size.y)*size.x);
 }
