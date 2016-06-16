@@ -19,6 +19,8 @@ private:
   // Device variables
   uchar *d_noisy_volume;
   uchar *d_denoised_volume;
+  uint3float1 *d_stacks;
+  uint *d_nstacks;
   int width, height, depth, size;
 
   // Parameters for launching kernels

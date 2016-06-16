@@ -12,7 +12,7 @@ std::vector<unsigned char> BM4D::run_first_step()
 
   Stopwatch blockmatching(true);
   // Do block matching
-  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), params);
+  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks);
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together
