@@ -128,9 +128,11 @@ void run_block_matching(uchar *d_noisy_volume,
 	std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
 	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
  std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
+ cudaStream_t *cu_streams = new cudaStream_t[size.z];
  for (int z = 0; z < size.z; z++){
    std::cout << "Computing z: " << z << std::endl;
-   k_block_matching << <grid, block >> >(
+   cudaStreamCreate(&cu_streams[z]);
+     k_block_matching << <grid, block, 0, cu_streams[z] >> >(
      z,
      d_noisy_volume,
      out,
