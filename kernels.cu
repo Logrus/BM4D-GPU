@@ -39,25 +39,21 @@ void add_stack(
 }
 
 __device__ float dist(uchar *img, uint3 size, uint3 ref, uint3 cmp, int k){
-	float diff(0);
-	for (int z = 0; z < k; ++z)
-		for (int y = 0; y < k; ++y)
-			for (int x = 0; x < k; ++x){
-				//float w(0);
-				//for (int pz = 0; pz<k; pz++)
-				//	for (int py = 0; py<k; py++)
-				//		for (int px = 0; px<k; px++){
-				//			int tx = x + i;
-				//			int ty = y + j;
-				//			int tz = k;
-				//			int fx = max(0, min(tx + px, size.x - 1));
-				//			int fy = max(0, min(ty + py, size.y - 1));
-				//			int fz = max(0, min(tz + py, size.z - 1));
-				//			float diff = img[x + (y + fz*size.y)*size.x] - img[fx + (fy + fz*size.y)*size.x];
-				float tmp = (img[(ref.x + x) + (ref.y + y)*size.x + (ref.z + z)*size.x*size.y] - img[(cmp.x + x) + (cmp.y + y)*size.x + (cmp.z + z)*size.x*size.y]);
-				diff += tmp*tmp;
-			}
-	return diff;
+  float diff(0);
+  for (int z = 0; z < k; ++z)
+    for (int y = 0; y < k; ++y)
+		    for (int x = 0; x < k; ++x){
+        int rx = max(0, min(x + ref.x, size.x - 1));
+        int ry = max(0, min(y + ref.y, size.y - 1));
+        int rz = max(0, min(z + ref.z, size.z - 1));
+        int cx = max(0, min(x + cmp.x, size.x - 1));
+        int cy = max(0, min(y + cmp.y, size.y - 1));
+        int cz = max(0, min(z + cmp.z, size.z - 1));
+        //printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
+		      float tmp = (img[(rx) + (ry)*size.x + (rz)*size.x*size.y] - img[(cx) + (cy)*size.x + (cz)*size.x*size.y]);
+		      diff += tmp*tmp;
+		    }
+  return diff;
 }
 
 __global__ void k_simple_kernel(uchar *img, const uint3 size){
@@ -84,21 +80,27 @@ __global__ void k_block_matching(
 								uint *d_nstacks
                                 )
 {
-  int lx = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int ly = (blockDim.y * blockIdx.y) + threadIdx.y;
-  int lz = (blockDim.z * blockIdx.z) + threadIdx.z;
-  uint halfx = window_size / 2;
-  uint halfy = window_size / 2;
-  uint halfz = window_size / 2;
-  int gx = lx + center.x - halfx;
-  int gy = ly + center.y - halfy;
-  int gz = lz + center.z - halfz;
-  if( gx >= size.x || gy >= size.y || gz >= size.z || gx < 0 || gy < 0 || gz < 0 )
+  int x = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int y = (blockDim.y * blockIdx.y) + threadIdx.y;
+  int z = (blockDim.z * blockIdx.z) + threadIdx.z;
+  if( x >= size.x || y >= size.y || z >= size.z || x < 0 || y < 0 || z < 0 )
    return;
-  uint3 ref = make_uint3(center.x, center.y, center.z);
-  uint3 cmp = make_uint3(gx, gy, gz);
-  float w = dist(img, size, ref, cmp, k);
-  img[(gx)+(gy)*size.x + (gz)*size.x*size.y] = w;
+
+  int wxb = fmaxf(0, x - window_size); // window x begin
+  int wyb = fmaxf(0, y - window_size); // window y begin
+  int wzb = fmaxf(0, z - window_size); // window z begin
+  int wxe = fminf(size.x - 1, x + window_size); // window x end
+  int wye = fminf(size.y - 1, y + window_size); // window y end
+  int wze = fminf(size.z - 1, z + window_size); // window z end
+  //printf("Scores:");
+  for (int wz = wzb; wz <= wze; wz++)
+    for (int wy = wyb; wy <= wye; wy++)
+      for (int wx = wyb; wx <= wye; wx++){
+        float w = dist(img, size, make_uint3(x,y,z), make_uint3(wx,wy,wz), k);
+  //      printf("%f\t", w);
+      }
+ //printf("\n");
+
   /*if (w < th){
 	  add_stack(
 		  &d_stacks[maxN * idx3(cmp.x, cmp.y, cmp.z, size.x, size.y)],
@@ -120,27 +122,26 @@ void run_block_matching(uchar *d_noisy_volume,
 					  )
 {
 	dim3 block(16, 16, 1);
-	dim3 grid(params.window_size / block.x, params.window_size / block.y, params.window_size);
+	dim3 grid(size.x / block.x, size.y / block.y, 1);
 	std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
 	std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
-	std::cout << "Warps: " << block.x * block.y * block.z / 32 << std::endl;
+	std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
 	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
- for (int y = 0; y < size.y-params.patch_size; ++y)
-   for (int x = 0; x < size.x - params.patch_size; ++x){
-     //std::cout << "Computing x: " << x << " y " << y << std::endl;
-       k_block_matching << <grid, block >> >(
-         make_uint3(x, y, 50),
-         d_noisy_volume,
-         out,
-         size,
-         params.patch_size,
-         params.maxN,
-         params.window_size,
-         params.sim_th,
-         d_stacks,
-         d_nstacks
-         );
-   }
+ std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
+
+  k_block_matching << <grid, block >> >(
+    make_uint3(0, 0, 0),
+    d_noisy_volume,
+    out,
+    size,
+    params.patch_size,
+    params.maxN,
+    params.window_size,
+    params.sim_th,
+    d_stacks,
+    d_nstacks
+    );
+  
 
 	cudaDeviceSynchronize();
 
