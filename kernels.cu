@@ -68,21 +68,21 @@ __global__ void k_simple_kernel(uchar *img, const uint3 size){
 }
 
 __global__ void k_block_matching(
-								const int in_z,
-								uchar *img,
-								uchar *out,
+								                        const int in_z,
+								                        uchar *img,
+								                        uchar *out,
                                 const uint3 size,
                                 int k,
                                 int maxN,
                                 int window_size,
                                 int th,
-								uint3float1 *d_stacks,
-								uint *d_nstacks
+								                        uint3float1 *d_stacks,
+								                        uint *d_nstacks
                                 )
 {
-  int x = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int y = (blockDim.y * blockIdx.y) + threadIdx.y;
-  int z = in_z; // (blockDim.z * blockIdx.z) + threadIdx.z;
+  int x = ((blockDim.x * blockIdx.x) + threadIdx.x)*3;
+  int y = ((blockDim.y * blockIdx.y) + threadIdx.y)*3;
+  int z = in_z*3; // (blockDim.z * blockIdx.z) + threadIdx.z;
   if( x >= size.x || y >= size.y || z >= size.z || x < 0 || y < 0 || z < 0 )
    return;
 
@@ -122,14 +122,14 @@ void run_block_matching(uchar *d_noisy_volume,
 					  )
 {
 	dim3 block(16, 16, 1);
-	dim3 grid(size.x / block.x, size.y / block.y, 1);
+	dim3 grid(size.x / block.x / params.step_size, size.y / block.y / params.step_size, 1);
 	std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
 	std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
 	std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
 	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
  std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
- cudaStream_t *cu_streams = new cudaStream_t[size.z];
- for (int z = 0; z < size.z; z++){
+ cudaStream_t *cu_streams = new cudaStream_t[size.z / params.step_size];
+ for (int z = 0; z < size.z / params.step_size; z++){
    std::cout << "Computing z: " << z << std::endl;
    cudaStreamCreate(&cu_streams[z]);
      k_block_matching << <grid, block, 0, cu_streams[z] >> >(
