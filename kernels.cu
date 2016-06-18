@@ -71,7 +71,10 @@ __global__ void k_simple_kernel(uchar *img, const uint3 size){
 
 }
 
-__global__ void k_block_matching(uchar *img,
+__global__ void k_block_matching(
+								const uint3 center,
+								uchar *img,
+								uchar *out,
                                 const uint3 size,
                                 int k,
                                 int maxN,
@@ -81,15 +84,22 @@ __global__ void k_block_matching(uchar *img,
 								uint *d_nstacks
                                 )
 {
-  int x = (blockDim.x * blockIdx.x) + threadIdx.x;
-  int y = (blockDim.y * blockIdx.y) + threadIdx.y;
-  int z = (blockDim.z * blockIdx.z) + threadIdx.z;
-  if( x >= size.x || y >= size.y || z >= size.z )
+  int lx = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int ly = (blockDim.y * blockIdx.y) + threadIdx.y;
+  int lz = (blockDim.z * blockIdx.z) + threadIdx.z;
+  uint halfx = window_size / 2;
+  uint halfy = window_size / 2;
+  uint halfz = window_size / 2;
+  int gx = lx + center.x - halfx;
+  int gy = ly + center.y - halfy;
+  int gz = lz + center.z - halfz;
+  if( gx >= size.x || gy >= size.y || gz >= size.z || gx < 0 || gy < 0 || gz < 0 )
    return;
-  uint3 ref = make_uint3(blockIdx.x, blockIdx.y, blockIdx.z);
-  uint3 cmp = make_uint3(threadIdx.x, threadIdx.y, threadIdx.z);
+  uint3 ref = make_uint3(center.x, center.y, center.z);
+  uint3 cmp = make_uint3(gx, gy, gz);
   float w = dist(img, size, ref, cmp, k);
-  if (w < th){
+  img[(gx)+(gy)*size.x + (gz)*size.x*size.y] = w;
+  /*if (w < th){
 	  add_stack(
 		  &d_stacks[maxN * idx3(cmp.x, cmp.y, cmp.z, size.x, size.y)],
 		  &d_nstacks[idx3(cmp.x, cmp.y, cmp.z, size.x, size.y)],
@@ -97,34 +107,41 @@ __global__ void k_block_matching(uchar *img,
 		  maxN
 		  );
 	  printf("Stack ref: %d %d %d, cmp: %d %d %d, diff %f\n", ref.x, ref.y, ref.z, cmp.x, cmp.y, cmp.z, w);
-  }
+  }*/
   //printf("%d", x+(y+z*size.y)*size.x);
 }
 
 void run_block_matching(uchar *d_noisy_volume,
+					                 uchar *out,
                       const uint3 size,
                       const Parameters params,
-					  uint3float1 *d_stacks,
-					  uint *d_nstacks
+					                 uint3float1 *d_stacks,
+					                 uint *d_nstacks
 					  )
 {
-	unsigned int line = size.x / 8;
-	dim3 grid(line, 1, 1);
-	dim3 block(32,32,1);
+	dim3 block(16, 16, 1);
+	dim3 grid(params.window_size / block.x, params.window_size / block.y, params.window_size);
 	std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
 	std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
-	std::cout << "Warps: " << 8 * 8 * 8 / 32 << std::endl;
-	std::cout << "Treads per block: " << 8 * 8 * 8 << std::endl;
-	std::cout << "Total threads: " << 8 * 8 * 8 * line << std::endl;
-	k_block_matching<<<grid,block>>>(d_noisy_volume,
-									size,
-									params.patch_size,
-									params.maxN,
-									params.window_size,
-									params.sim_th,
-									d_stacks,
-									d_nstacks
-		);
+	std::cout << "Warps: " << block.x * block.y * block.z / 32 << std::endl;
+	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
+ for (int y = 0; y < size.y-params.patch_size; ++y)
+   for (int x = 0; x < size.x - params.patch_size; ++x){
+     //std::cout << "Computing x: " << x << " y " << y << std::endl;
+       k_block_matching << <grid, block >> >(
+         make_uint3(x, y, 50),
+         d_noisy_volume,
+         out,
+         size,
+         params.patch_size,
+         params.maxN,
+         params.window_size,
+         params.sim_th,
+         d_stacks,
+         d_nstacks
+         );
+   }
+
 	cudaDeviceSynchronize();
 
 	checkCudaErrors(cudaGetLastError());

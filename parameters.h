@@ -6,7 +6,7 @@
 struct Parameters{
   std::string filename = "data/t.txt";
   int   patch_size=4;   // Patch size
-  int   window_size=11; // Search window (size=window_size)
+  int   window_size=32; // Search window (size=window_size)
   int   step_size=3;
   float sim_th=25000.0;   // Similarity threshold for the first step
   int   maxN=16;          // Maximal number of the patches in one group

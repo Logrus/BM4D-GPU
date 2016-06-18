@@ -21,6 +21,7 @@ int main(int argc, char *argv[]){
   Stopwatch loading_file(true); // true - start right away
   reader.read(p.filename, noisy_image, width, height, depth);
   loading_file.stop(); std::cout<<"Loading file took: "<<loading_file.getSeconds()<<std::endl;
+  std::cout << "Volume size: (" << width << ", " << height << ", " << depth<< ") total: " << width*height*depth << std::endl;
 
 
   // Run first step of BM4D

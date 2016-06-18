@@ -10,9 +10,11 @@ std::vector<unsigned char> BM4D::run_first_step()
   copy_image_to_device();
   copyingtodevice.stop(); std::cout<<"Copying to device took: "<<copyingtodevice.getSeconds()<<std::endl;
 
+  // Perform computation in a sliced blocks
+  
   Stopwatch blockmatching(true);
   // Do block matching
-  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks);
+  run_block_matching(d_noisy_volume, d_denoised_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks);
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together

@@ -29,6 +29,7 @@ inline uint3float1 make_uint3float1(uint x, uint y, uint z, float val) { return 
 inline uint3float1 make_uint3float1(uint3 c, float val) { return uint3float1(c.x, c.y, c.z, val); }
 
 void run_block_matching(uchar *d_noisy_volume,
+					  uchar *out,
                       const uint3 im_size,
                       const Parameters params,
 					  uint3float1 *d_stacks,
