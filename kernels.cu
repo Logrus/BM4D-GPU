@@ -68,7 +68,7 @@ __global__ void k_simple_kernel(uchar *img, const uint3 size){
 }
 
 __global__ void k_block_matching(
-								const uint3 center,
+								const int in_z,
 								uchar *img,
 								uchar *out,
                                 const uint3 size,
@@ -82,7 +82,7 @@ __global__ void k_block_matching(
 {
   int x = (blockDim.x * blockIdx.x) + threadIdx.x;
   int y = (blockDim.y * blockIdx.y) + threadIdx.y;
-  int z = (blockDim.z * blockIdx.z) + threadIdx.z;
+  int z = in_z; // (blockDim.z * blockIdx.z) + threadIdx.z;
   if( x >= size.x || y >= size.y || z >= size.z || x < 0 || y < 0 || z < 0 )
    return;
 
@@ -128,19 +128,21 @@ void run_block_matching(uchar *d_noisy_volume,
 	std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
 	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
  std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
+ for (int z = 0; z < size.z; z++){
+   k_block_matching << <grid, block >> >(
+     z,
+     d_noisy_volume,
+     out,
+     size,
+     params.patch_size,
+     params.maxN,
+     params.window_size,
+     params.sim_th,
+     d_stacks,
+     d_nstacks
+     );
+ }
 
-  k_block_matching << <grid, block >> >(
-    make_uint3(0, 0, 0),
-    d_noisy_volume,
-    out,
-    size,
-    params.patch_size,
-    params.maxN,
-    params.window_size,
-    params.sim_th,
-    d_stacks,
-    d_nstacks
-    );
   
 
 	cudaDeviceSynchronize();
