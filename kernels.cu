@@ -129,6 +129,7 @@ void run_block_matching(uchar *d_noisy_volume,
 	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
  std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
  for (int z = 0; z < size.z; z++){
+   std::cout << "Computing z: " << z << std::endl;
    k_block_matching << <grid, block >> >(
      z,
      d_noisy_volume,
