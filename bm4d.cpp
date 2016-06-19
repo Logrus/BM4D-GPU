@@ -2,22 +2,31 @@
 
 std::vector<unsigned char> BM4D::run_first_step()
 {
-  //working_image.resize(size);
-  //working_image.assign(noisy_volume.begin(), noisy_volume.end());
 
   Stopwatch copyingtodevice(true);
-  // working_image -> d_noisy_volume
   copy_image_to_device();
   copyingtodevice.stop(); std::cout<<"Copying to device took: "<<copyingtodevice.getSeconds()<<std::endl;
-
-  // Perform computation in a sliced blocks
   
-  Stopwatch blockmatching(true);
+  std::cout << "Width " << width << " height " << height << " depth " << depth << std::endl;
+  std::cout << "Size " <<size << std::endl;
+
+  uchar* d_denoised_volume;
+  checkCudaErrors(cudaMalloc((void**)&d_denoised_volume, sizeof(uchar)*size));
+  checkCudaErrors(cudaMemset((void*)d_denoised_volume,0, sizeof(uchar)*size));
+
   // Do block matching
-  run_block_matching(d_noisy_volume, d_denoised_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks);
+  Stopwatch blockmatching(true);
+  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), make_uint3(twidth, theight, tdepth), params, d_stacks, d_nstacks, d_denoised_volume);
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together
+  int deb_size; // TODO: remove
+  gather_cubes(d_noisy_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, deb_size);
+  std::cout << "Acquied size " << deb_size << std::endl;
+
+  base_volume.resize(deb_size*params.patch_size*params.patch_size*params.patch_size);
+  checkCudaErrors(cudaMemcpy((void*)base_volume.data(), (void*)d_gathered4dstack, sizeof(uchar)*deb_size*params.patch_size*params.patch_size*params.patch_size, cudaMemcpyDeviceToHost));
+  CImg<uchar> test1(base_volume.data(), width, height, deb_size, params.patch_size, 1); test1.display();
 
   // Perform 3D DCT
   //run_dct3d();
@@ -32,11 +41,15 @@ std::vector<unsigned char> BM4D::run_first_step()
   //run_aggregation();
 
   // d_noisy_volume -> working_image
-  Stopwatch copyingtohost(true);
-  copy_image_to_host();
-  copyingtohost.stop(); std::cout<<"Copying to host took: "<<copyingtohost.getSeconds()<<std::endl;
-  CImg<float> test1(noisy_volume.data(), width, height, depth, 1); test1.display();
+  //Stopwatch copyingtohost(true);
+  //copy_image_to_host();
+  //copyingtohost.stop(); std::cout<<"Copying to host took: "<<copyingtohost.getSeconds()<<std::endl;
+  //CImg<float> test2(noisy_volume.data(), width, height, depth, 1); test2.display();
 
+  //uchar* patches = new uchar[deb_size*params.patch_size];
+  //checkCudaErrors(cudaMemcpy((void*)patches, (void*)d_gathered4dstack, sizeof(uchar)*deb_size*params.patch_size, cudaMemcpyDeviceToHost));
+  //CImg<uchar> test2(patches, params.patch_size, params.patch_size, deb_size, 1); test2.display();
+  //delete[] patches;
   //noisy_volume.assign(working_image.begin(), working_image.end());
   return noisy_volume;
 }

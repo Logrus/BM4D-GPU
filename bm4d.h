@@ -18,10 +18,14 @@ private:
 
   // Device variables
   uchar *d_noisy_volume;
-  uchar *d_denoised_volume;
+  //uchar *d_denoised_volume;
+  uchar *d_gathered4dstack;
+  uint *d_nstacks_pow;
   uint3float1 *d_stacks;
   uint *d_nstacks;
   int width, height, depth, size;
+  int twidth, theight, tdepth, tsize;
+  uint gather_stack_sum;
 
   // Parameters for launching kernels
   dim3 block;
@@ -44,7 +48,13 @@ public:
       params(p),
       width(width),
       height(height),
-      depth(depth)
+      depth(depth),
+      d_noisy_volume(NULL),
+      //d_denoised_volume(NULL),
+      d_gathered4dstack(NULL),
+      d_stacks(NULL),
+      d_nstacks_pow(NULL),
+      d_nstacks(NULL)
   {
     noisy_volume = in_noisy_volume;
     size = width*height*depth;
@@ -53,25 +63,47 @@ public:
     checkCudaErrors(cudaGetDeviceProperties(&d_prop, device));
 
     // Memory allocation
-    checkCudaErrors(cudaMalloc((void**) &d_noisy_volume, sizeof(uchar)*size));
+    checkCudaErrors(cudaMalloc((void**)&d_noisy_volume, sizeof(uchar)*size));
     std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_noisy_volume"<<std::endl;
-    checkCudaErrors(cudaMalloc((void**) &d_denoised_volume, sizeof(uchar)*size));
-    std::cout<<"Allocated "<<sizeof(uchar)*size<<" bytes for d_denoised_volume"<<std::endl;
-	//checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN * 1024)));
-	std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*size) << " bytes for d_stacks" << std::endl;
-	//checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint3float1)*(1024)));
-	//std::cout << "Allocated " << sizeof(uint3float1)*(1024) << " bytes for d_nstacks" << std::endl;
+
+    twidth  = std::floor((width - 1)  / params.step_size + 1);
+    theight = std::floor((height - 1) / params.step_size + 1);
+    tdepth  = std::floor((depth - 1)  / params.step_size + 1);
+    tsize   = twidth * theight * tdepth;
+
+    checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN *tsize)));
+    std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << " bytes for d_stacks" << std::endl;
+
+    checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint3float1)*(tsize)));
+    std::cout << "Allocated " << (tsize) << " elements for d_nstacks" << std::endl;
+
+    checkCudaErrors(cudaMalloc((void**)&d_nstacks_pow, sizeof(uint3float1)*(tsize)));
+    std::cout << "Allocated " << (tsize) << " elements for d_nstacks_pow" << std::endl;
   };
+
   inline ~BM4D(){
     // Cleanup
-    checkCudaErrors(cudaFree(d_noisy_volume));
-    std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_noisy_volume"<<std::endl;
-    checkCudaErrors(cudaFree(d_denoised_volume));
-    std::cout<<"Cleaned up "<<sizeof(uchar)*size<<" bytes of d_denoised_volume"<<std::endl;
-	//checkCudaErrors(cudaFree(d_stacks));
-	//std::cout << "Cleaned up " << sizeof(uint3float1)*(params.maxN*size) << " bytes of d_stacks" << std::endl;
-	//checkCudaErrors(cudaFree(d_nstacks));
-	//std::cout << "Cleaned up " << sizeof(uint3float1)*(size) << " bytes of d_nstacks" << std::endl;
+    if (d_noisy_volume){
+      checkCudaErrors(cudaFree(d_noisy_volume));
+      std::cout << "Cleaned up d_noisy_volume" << std::endl;
+    }
+    //if (d_denoised_volume){
+    //  checkCudaErrors(cudaFree(d_denoised_volume));
+    //  std::cout << "Cleaned up d_denoised_volume" << std::endl;
+    //}
+    if (d_stacks){
+      checkCudaErrors(cudaFree(d_stacks));
+      std::cout << "Cleaned up d_stacks" << std::endl;
+    }
+    if (d_nstacks){
+      checkCudaErrors(cudaFree(d_nstacks));
+      std::cout << "Cleaned up d_nstacks" << std::endl;
+    }
+    if (d_gathered4dstack){
+      checkCudaErrors(cudaFree(d_gathered4dstack));
+      std::cout << "Cleaned up bytes of d_gathered4dstack" << std::endl;
+    }
+
   };
 
   std::vector<unsigned char> run_first_step();
