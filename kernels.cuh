@@ -40,6 +40,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
 // Gather cubes together
 void gather_cubes(const uchar* __restrict img,
                   const uint3 size,
+                  const uint3 tsize,
                   const Parameters params,
                   const uint3float1* __restrict d_stacks,
                   const uint* __restrict d_nstacks,

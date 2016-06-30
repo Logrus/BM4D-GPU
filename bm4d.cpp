@@ -22,7 +22,7 @@ std::vector<unsigned char> BM4D::run_first_step()
   // Gather cubes together
   int deb_size; // TODO: remove
   Stopwatch gatheringcubes(true);
-  gather_cubes(d_noisy_volume, make_uint3(width, height, depth), params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, deb_size);
+  gather_cubes(d_noisy_volume, make_uint3(width, height, depth), make_uint3(twidth, theight, tdepth), params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, deb_size);
   std::cout << "Acquied size " << deb_size << std::endl;
   gatheringcubes.stop(); std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
 

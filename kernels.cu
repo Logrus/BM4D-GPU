@@ -1,6 +1,7 @@
 #include "kernels.cuh"
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
+#include <thrust/copy.h>
 
 #define BLOCK_SIZE 1
 #define divideup(x,y) (1 + (((x) - 1) / (y)))
@@ -164,7 +165,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
 __global__ void k_nstack_to_pow(const uint* __restrict d_nstacks, uint* d_nstacks_pow, const int size){
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x){
     d_nstacks_pow[i] = flp2(d_nstacks[i]);
-    printf("Original: %d Stripped: %d\n", d_nstacks[i], flp2(d_nstacks[i]));
+    //printf("Original: %d Stripped: %d\n", d_nstacks[i], flp2(d_nstacks[i]));
   }
 }
 
@@ -203,8 +204,18 @@ __global__ void k_gather_cubes(const uchar* __restrict img,
   }
 }
 
+struct is_not_zero
+{
+  __host__ __device__
+    bool operator()(const uint3float1 x)
+  {
+    return (x.val != 0 || x.x != 0 || x.y != 0 || x.z != 0);
+  }
+};
+
 void gather_cubes(const uchar* __restrict img,
                   const uint3 size,
+                  const uint3 tsize,
                   const Parameters params,
                   const uint3float1* __restrict d_stacks,
                   const uint* __restrict d_nstacks,
@@ -222,7 +233,15 @@ void gather_cubes(const uchar* __restrict img,
 
   gather_stack_sum = sum; // TODO: remove debug
 
-  // Allocate memory for gathered stacksuchar
+  // Make a compaction
+  //uint3float1 * d_stacks_compacted;
+  //checkCudaErrors(cudaMalloc((void**)&d_stacks_compacted, sizeof(uint3float1)*(params.maxN *tsize.x*tsize.y*tsize.z)));
+  //thrust::device_ptr<uint3float1> dt_stacks = thrust::device_pointer_cast(d_stacks);
+  //thrust::device_ptr<int> dp_R(d_stacks_compacted);
+  //thrust::copy_if(dt_stacks, dt_stacks + params.maxN *tsize.x*tsize.y*tsize.z, d_stacks_compacted, is_not_zero());
+
+
+  // Allocate memory for gathered stacks uchar
   checkCudaErrors(cudaMalloc((void**)&d_gathered4dstack, sizeof(uchar)*(sum*params.patch_size*params.patch_size*params.patch_size)));
   std::cout << "Allocated " << sizeof(uchar)*(sum*params.patch_size*params.patch_size*params.patch_size) << " bytes for gathered4dstack" << std::endl;
 
