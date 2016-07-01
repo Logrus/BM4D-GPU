@@ -312,12 +312,13 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
   cube[z][y][x] = d_gathered4dstack[idx];
   __syncthreads();
   // Do 2d dct for rows (by taking slices along z direction)
-  //float tmp = dct_coeff[y][0] * cube[x][0][z] + dct_coeff[y][1] * cube[x][1][z] + dct_coeff[y][2] * cube[x][2][z] + dct_coeff[y][3] * cube[x][3][z];
-  float tmp = dct_coeff[x][0] * cube[0][y][z] + dct_coeff[x][1] * cube[1][y][z] + dct_coeff[x][2] * cube[2][y][z] + dct_coeff[x][3] * cube[3][y][z];
+  float tmp = dct_coeff[y][0] * cube[z][0][x] + dct_coeff[y][1] * cube[z][1][x] + dct_coeff[y][2] * cube[z][2][x] + dct_coeff[y][3] * cube[z][3][x];
   __syncthreads();
   cube[z][y][x] = tmp;
   __syncthreads();
-  //tmp = dct_coeff[0][x] * cube[0][x][z] + dct_coeff[1][x] * cube[1][x][z] + dct_coeff[2][x] * cube[2][x][z] + dct_coeff[3][x] * cube[3][x][z];
+
+
+  tmp = dct_coeff[0][x] * cube[0][x][z] + dct_coeff[1][x] * cube[1][x][z] + dct_coeff[2][x] * cube[2][x][z] + dct_coeff[3][x] * cube[3][x][z];
   //__syncthreads();
   //cube[x][y][z] = tmp;
  // cube[x][y][z] = dct_coeff[0][x] * cube[0][x][z] + dct_coeff[1][x] * cube[1][x][z] + dct_coeff[2][x] * cube[2][x][z] + dct_coeff[3][x] * cube[3][x][z];
