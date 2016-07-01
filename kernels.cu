@@ -5,9 +5,29 @@
 #include <thrust/remove.h>
 #include <math.h>
 
-#define PI 3.14159265359
-#define BLOCK_SIZE 1
-#define divideup(x,y) (1 + (((x) - 1) / (y)))
+__global__ void k_debug_lookup_stacks(uint3float1 * d_stacks, int total_elements){
+  int a = 345;
+  for (int i = 0; i < 15; ++i){
+    a += i;
+    printf("%i: %d %d %d %f\n", i, d_stacks[i].x, d_stacks[i].y, d_stacks[i].z, d_stacks[i].val);
+  }
+
+}
+
+void __global__ k_debug_lookup_4dgathered_stack(float* gathered_stack4d){
+  for (int i = 0; i < 64 * 1; ++i){
+
+    if (!(i % 4)) printf("\n");
+    if (!(i % 16)) printf("------------\n");
+    printf("%f ", gathered_stack4d[i]);
+  }
+}
+
+void debug_kernel(float* tmp){
+  k_debug_lookup_4dgathered_stack << <1, 1 >> >(tmp);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+}
 
 // Nearest lower power of 2
 __device__ __inline__ uint flp2(uint x)
@@ -115,7 +135,6 @@ __global__ void k_block_matching(const uchar* __restrict img,
     
 }
 
-
 void run_block_matching(const uchar* __restrict d_noisy_volume,
                         const uint3 size,
                         const uint3 tsize,
@@ -131,11 +150,11 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
  // Debug verification
  std::cout << "Total number of reference patches " << (tsize.x*tsize.y*tsize.z) << std::endl;
 
-	std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
-	std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
-	std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
-	std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
- std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
+	//std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
+	//std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
+	//std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
+	//std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
+ //std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
 
  k_block_matching << <grid, block >> >(d_noisy_volume,
                                        size,
@@ -153,7 +172,6 @@ __global__ void k_nstack_to_pow(const uint* __restrict d_nstacks, uint* d_nstack
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x){
     if (i<size) 
       d_nstacks_pow[i] = flp2(d_nstacks[i]);
-    //printf("Original: %d Stripped: %d\n", d_nstacks[i], flp2(d_nstacks[i]));
   }
 }
 
@@ -196,24 +214,6 @@ struct is_not_empty
     return (x.val != -1);
   }
 };
-
-__global__ void k_debug_lookup_stacks(uint3float1 * d_stacks, int total_elements){
-  int a=345;
-  for (int i = 0; i < 15; ++i){
-    a += i;
-    printf("%i: %d %d %d %f\n", i, d_stacks[i].x, d_stacks[i].y, d_stacks[i].z, d_stacks[i].val);
-  }
-
-}
-
-void __global__ k_debug_lookup_4dgathered_stack(float* gathered_stack4d){
-  for (int i = 0; i < 64*1; ++i){
-    
-    if (!(i % 4)) printf("\n");
-    if (!(i % 16)) printf("------------\n");
-    printf("%f ", gathered_stack4d[i]);
-  }
-}
 
 void gather_cubes(const uchar* __restrict img,
                   const uint3 size,
@@ -264,52 +264,7 @@ void gather_cubes(const uchar* __restrict img,
   
 }
 
-void debug_kernel(float* tmp){
-  k_debug_lookup_4dgathered_stack << <1, 1 >> >(tmp);
-  cudaDeviceSynchronize();
-  checkCudaErrors(cudaGetLastError());
-}
-
-#define BLOCK_SIZE2 16
-#define BLOCK_SIZE 4
-__device__ __host__ float alpha(int i){
-  if (i == 0) return 0.5f;
-  else return 0.70710678118f;
-}
-
-// (a,b) -> (a+b,a-b) without overflow
-__device__ __host__ void whrotate(float* a, float* b)
-{
-  float* t;
-  *t = *a;
-  *a = *a + *b;
-  *b = *t - *b;
-}
-
-// Integer log2
-__device__ __host__ long ilog2(long x)
-{
-  long l2 = 0;
-  for (; x; x >>= 1) ++l2;
-  return l2;
-}
-
-/**
-* Fast Walsh-Hadamard transform
-*/
-__device__ __host__ void fwht(float* data, int size)
-{
-  const long l2 = ilog2(size) - 1;
-
-  for (long i = 0; i < l2; ++i)
-  {
-    for (long j = 0; j < (1 << l2); j += 1 << (i + 1))
-      for (long k = 0; k < (1 << i); ++k)
-        whrotate(&data[j + k], &data[j + k + (1 << i)]);
-  }
-}
-
-__global__ void dct3d(float* d_gathered4dstack, int patch_size, uint gathered_size, uint* d_nstacks, uint* accumulated_nstacks){
+__global__ void dct3d(float* d_gathered4dstack, int patch_size){
   int x = threadIdx.x;
   int y = threadIdx.y;
   int z = threadIdx.z;
@@ -352,29 +307,48 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size, uint gathered_si
   __syncthreads();
   cube[z][y][x] = z_vec[0] * dct_coeff[z][0] + z_vec[1] * dct_coeff[z][1] + z_vec[2] * dct_coeff[z][2] + z_vec[3] * dct_coeff[z][3];
   __syncthreads();
-  //////// WHT
-  if (z < gathered_size){
-    float group_vector[16];
-    int size = d_nstacks[z];
-    int group_start = accumulated_nstacks[z];
-    int wh_start_idx = (group_start*stride);
-    for (int i = 0; i < size; i++){
-      int gl_idx = wh_start_idx + (x + y*patch_size + i*patch_size*patch_size*patch_size);
-      group_vector[i] = d_gathered4dstack[gl_idx];
-    }
-    fwht(group_vector, size);
-    // Threshold
+  d_gathered4dstack[idx] = cube[z][y][x];
+}
 
-  } //endif z<gathered_size
+void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size){
+  dct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size);
+  debug_kernel(d_gathered4dstack);
+}
+
+__global__ void idct3d(float* d_gathered4dstack, int patch_size){
+  int x = threadIdx.x;
+  int y = threadIdx.y;
+  int z = threadIdx.z;
+  int cuIdx = blockIdx.x;
+  int stride = patch_size*patch_size*patch_size;
+  // DCT 4x4 matrix
+  const float dct_coeff[4][4] =
+  {
+    { 0.500000000000000f, 0.500000000000000f, 0.500000000000000f, 0.500000000000000f },
+    { 0.653281482438188f, 0.270598050073099f, -0.270598050073099f, -0.653281482438188f },
+    { 0.500000000000000f, -0.500000000000000f, -0.500000000000000f, 0.500000000000000f },
+    { 0.270598050073099f, -0.653281482438188f, 0.653281482438188f, -0.270598050073099f }
+  };
+  const float dct_coeff_T[4][4] =
+  {
+    { 0.500000000000000f, 0.653281482438188f, 0.500000000000000f, 0.270598050073099f },
+    { 0.500000000000000f, 0.270598050073099f, -0.500000000000000f, -0.653281482438188f },
+    { 0.500000000000000f, -0.270598050073099f, -0.500000000000000f, 0.653281482438188f },
+    { 0.500000000000000f, -0.653281482438188f, 0.500000000000000f, -0.270598050073099f }
+  };
+  // Load corresponding cube to the shared memory
+  __shared__ float cube[4][4][4];
+  int idx = (cuIdx*stride) + (x + y*patch_size + z*patch_size*patch_size);
+  cube[z][y][x] = d_gathered4dstack[idx];
   __syncthreads();
-  ////////
+  float z_vec[4];
   for (int i = 0; i < 4; ++i){
     z_vec[i] = cube[i][y][x];
   }
   __syncthreads();
   cube[z][y][x] = z_vec[0] * dct_coeff_T[z][0] + z_vec[1] * dct_coeff_T[z][1] + z_vec[2] * dct_coeff_T[z][2] + z_vec[3] * dct_coeff_T[z][3];
   __syncthreads();
-  tmp = dct_coeff_T[y][0] * cube[z][0][x] + dct_coeff_T[y][1] * cube[z][1][x] + dct_coeff_T[y][2] * cube[z][2][x] + dct_coeff_T[y][3] * cube[z][3][x];
+  float tmp = dct_coeff_T[y][0] * cube[z][0][x] + dct_coeff_T[y][1] * cube[z][1][x] + dct_coeff_T[y][2] * cube[z][2][x] + dct_coeff_T[y][3] * cube[z][3][x];
   __syncthreads();
   cube[z][y][x] = tmp;
   tmp = dct_coeff[0][x] * cube[z][y][0] + dct_coeff[1][x] * cube[z][y][1] + dct_coeff[2][x] * cube[z][y][2] + dct_coeff[3][x] * cube[z][y][3];
@@ -384,15 +358,68 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size, uint gathered_si
   d_gathered4dstack[idx] = cube[z][y][x];
 }
 
-void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks){
+void run_idct3d(float* d_gathered4dstack, uint gathered_size, int patch_size){
+  idct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size);
+  debug_kernel(d_gathered4dstack);
+}
+
+// (a,b) -> (a+b,a-b) without overflow
+__device__ __host__ void whrotate(float* a, float* b)
+{
+  float* t;
+  *t = *a;
+  *a = *a + *b;
+  *b = *t - *b;
+}
+
+// Integer log2
+__device__ __host__ long ilog2(long x)
+{
+  long l2 = 0;
+  for (; x; x >>= 1) ++l2;
+  return l2;
+}
+
+/**
+* Fast Walsh-Hadamard transform
+*/
+__device__ __host__ void fwht(float* data, int size)
+{
+  const long l2 = ilog2(size) - 1;
+  for (long i = 0; i < l2; ++i)
+  {
+    for (long j = 0; j < (1 << l2); j += 1 << (i + 1))
+      for (long k = 0; k < (1 << i); ++k)
+        whrotate(&data[j + k], &data[j + k + (1 << i)]);
+  }
+}
+
+__global__ void k_run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks, uint* accumulated_nstacks){
+  int x = threadIdx.x;
+  int y = threadIdx.y;
+  int z = threadIdx.z;
+  int cuIdx = blockIdx.x;
+  int stride = patch_size*patch_size*patch_size;
+  float group_vector[16];
+  int size = d_nstacks[z];
+  int group_start = accumulated_nstacks[z];
+  int wh_start_idx = (group_start*stride);
+  for (int i = 0; i < size; i++){
+    int gl_idx = wh_start_idx + (x + y*patch_size + i*patch_size*patch_size*patch_size);
+    group_vector[i] = d_gathered4dstack[gl_idx];
+  }
+  fwht(group_vector, size);
+  // Threshold
+  // Inverse fwht
+
+}
+
+void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks){
   uint* accumulated_nstacks;
   checkCudaErrors(cudaMalloc((void **)&accumulated_nstacks, sizeof(uint)*gathered_size));
   thrust::device_ptr<uint> dt_accumulated_nstacks = thrust::device_pointer_cast(accumulated_nstacks);
   thrust::device_ptr<uint> dt_nstacks = thrust::device_pointer_cast(d_nstacks);
   thrust::inclusive_scan(dt_nstacks, dt_nstacks + gathered_size, dt_accumulated_nstacks);
   accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
-
-  dct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size, gathered_size, d_nstacks, accumulated_nstacks);
-  debug_kernel(d_gathered4dstack);
-
+  k_run_wht_ht_iwht << <1, dim3(4, 4, 1) >> > (d_gathered4dstack, patch_size, gathered_size, d_nstacks, accumulated_nstacks);
 }
