@@ -306,6 +306,13 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
     { 0.500000000000000f, -0.500000000000000f, -0.500000000000000f,  0.500000000000000f },
     { 0.270598050073099f, -0.653281482438188f,  0.653281482438188f, -0.270598050073099f }
   };
+  const float dct_coeff_T[4][4] =
+  {
+    { 0.500000000000000f, 0.653281482438188f, 0.500000000000000f, 0.270598050073099f },
+    { 0.500000000000000f, 0.270598050073099f, -0.500000000000000f, -0.653281482438188f },
+    { 0.500000000000000f, -0.270598050073099f, -0.500000000000000f, 0.653281482438188f },
+    { 0.500000000000000f, -0.653281482438188f, 0.500000000000000f, -0.270598050073099f }
+  };
   // Load corresponding cube to the shared memory
   __shared__ float cube[4][4][4];
   int idx = (cuIdx*stride)+(x + y*patch_size + z*patch_size*patch_size);
@@ -316,20 +323,33 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
   __syncthreads();
   cube[z][y][x] = tmp;
   __syncthreads();
-
-
-  tmp = dct_coeff[0][x] * cube[0][x][z] + dct_coeff[1][x] * cube[1][x][z] + dct_coeff[2][x] * cube[2][x][z] + dct_coeff[3][x] * cube[3][x][z];
-  //__syncthreads();
-  //cube[x][y][z] = tmp;
- // cube[x][y][z] = dct_coeff[0][x] * cube[0][x][z] + dct_coeff[1][x] * cube[1][x][z] + dct_coeff[2][x] * cube[2][x][z] + dct_coeff[3][x] * cube[3][x][z];
-  //cube[x][y][z] = dct_coeff[y][0] * cube[0][y][z] + dct_coeff[y][1] * cube[1][y][z] + dct_coeff[y][2] * cube[2][y][z] + dct_coeff[y][3] * cube[3][y][z];
-  //cube[x][y][z] = dct_coeff[0][x] * cube[0][y][z] + dct_coeff[1][x] * cube[1][y][z] + dct_coeff[2][x] * cube[2][y][z] + dct_coeff[3][x] * cube[3][y][z];
+  tmp = dct_coeff_T[0][x] * cube[z][y][0] + dct_coeff_T[1][x] * cube[z][y][1] + dct_coeff_T[2][x] * cube[z][y][2] + dct_coeff_T[3][x] * cube[z][y][3];
   __syncthreads();
-
-  // Part of inverse, maybe..
-  //cube[x][y][z] = dct_coeff[0][y] * cube[x][0][z] + dct_coeff[1][y] * cube[x][1][z] + dct_coeff[2][y] * cube[x][2][z] + dct_coeff[3][y] * cube[x][3][z];
-
-
+  cube[z][y][x] = tmp;
+  __syncthreads();
+  // Grab Z vector
+  float z_vec[4];
+  for (int i = 0; i < 4; ++i){
+    z_vec[i] = cube[i][y][x];
+  }
+  __syncthreads();
+  cube[z][y][x] = z_vec[0] * dct_coeff[z][0] + z_vec[1] * dct_coeff[z][1] + z_vec[2] * dct_coeff[z][2] + z_vec[3] * dct_coeff[z][3];
+  __syncthreads();
+  //////// WHT
+  ////////
+  for (int i = 0; i < 4; ++i){
+    z_vec[i] = cube[i][y][x];
+  }
+  __syncthreads();
+  cube[z][y][x] = z_vec[0] * dct_coeff_T[z][0] + z_vec[1] * dct_coeff_T[z][1] + z_vec[2] * dct_coeff_T[z][2] + z_vec[3] * dct_coeff_T[z][3];
+  __syncthreads();
+  tmp = dct_coeff_T[y][0] * cube[z][0][x] + dct_coeff_T[y][1] * cube[z][1][x] + dct_coeff_T[y][2] * cube[z][2][x] + dct_coeff_T[y][3] * cube[z][3][x];
+  __syncthreads();
+  cube[z][y][x] = tmp;
+  tmp = dct_coeff[0][x] * cube[z][y][0] + dct_coeff[1][x] * cube[z][y][1] + dct_coeff[2][x] * cube[z][y][2] + dct_coeff[3][x] * cube[z][y][3];
+  __syncthreads();
+  cube[z][y][x] = tmp;
+  __syncthreads();
   d_gathered4dstack[idx] = cube[z][y][x];
 }
 
