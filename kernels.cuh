@@ -21,7 +21,7 @@ struct uint3float1
 	uint y;
 	uint z;
 	float val;
-
+ __host__ __device__ uint3float1() : x(0), y(0), z(0), val(-1){};
 	__host__ __device__ uint3float1(uint x, uint y, uint z, float val) : x(x), y(y), z(z), val(val) { }
 };
 
@@ -42,17 +42,19 @@ void gather_cubes(const uchar* __restrict img,
                   const uint3 size,
                   const uint3 tsize,
                   const Parameters params,
-                  const uint3float1* __restrict d_stacks,
+                  uint3float1* d_stacks,
                   const uint* __restrict d_nstacks,
-                  uchar* d_gathered4dstack,
+                  float* &d_gathered4dstack,
                   uint* d_nstacks_pow,
                   int &gather_stack_sum); // TODO: remove
 
 // Perform 3D DCT
-void run_dct3d();
+void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size);
 // Do WHT in 4th dim + Hard Thresholding + IWHT
 void run_wht_ht_iwht();
 // Perform inverse 3D DCT
 void run_idct3d();
 // Aggregate
 void run_aggregation();
+
+void debug_kernel(float* tmp);

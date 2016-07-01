@@ -17,12 +17,12 @@ private:
   std::vector<uchar> base_volume;
 
   // Device variables
-  uchar *d_noisy_volume;
+  uchar* d_noisy_volume;
   //uchar *d_denoised_volume;
-  uchar *d_gathered4dstack;
-  uint *d_nstacks_pow;
-  uint3float1 *d_stacks;
-  uint *d_nstacks;
+  float* d_gathered4dstack;
+  uint* d_nstacks_pow;
+  uint3float1* d_stacks;
+  uint* d_nstacks;
   int width, height, depth, size;
   int twidth, theight, tdepth, tsize;
   uint gather_stack_sum;
@@ -71,8 +71,11 @@ public:
     tdepth  = std::floor((depth - 1)  / params.step_size + 1);
     tsize   = twidth * theight * tdepth;
 
+    uint3float1* tmp_arr = new uint3float1[params.maxN*tsize];
     checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN *tsize)));
     std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << " bytes for d_stacks" << std::endl;
+    checkCudaErrors(cudaMemcpy(d_stacks, tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
+    delete[] tmp_arr;
 
     checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint3float1)*(tsize)));
     std::cout << "Allocated " << (tsize) << " elements for d_nstacks" << std::endl;
@@ -91,10 +94,10 @@ public:
     //  checkCudaErrors(cudaFree(d_denoised_volume));
     //  std::cout << "Cleaned up d_denoised_volume" << std::endl;
     //}
-    if (d_stacks){
-      checkCudaErrors(cudaFree(d_stacks));
-      std::cout << "Cleaned up d_stacks" << std::endl;
-    }
+    //if (d_stacks){
+    //  checkCudaErrors(cudaFree(d_stacks));
+    //  std::cout << "Cleaned up d_stacks" << std::endl;
+    //}
     if (d_nstacks){
       checkCudaErrors(cudaFree(d_nstacks));
       std::cout << "Cleaned up d_nstacks" << std::endl;
@@ -103,7 +106,7 @@ public:
       checkCudaErrors(cudaFree(d_gathered4dstack));
       std::cout << "Cleaned up bytes of d_gathered4dstack" << std::endl;
     }
-
+    cudaDeviceReset();
   };
 
   std::vector<unsigned char> run_first_step();
