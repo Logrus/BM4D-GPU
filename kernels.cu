@@ -277,22 +277,39 @@ __device__ __host__ float alpha(int i){
   else return 0.70710678118f;
 }
 
-__device__ __host__ void mult4x4(float *in_out, int stride, const float *coeff, int coeff_stride)
+// (a,b) -> (a+b,a-b) without overflow
+__device__ __host__ void whrotate(float* a, float* b)
 {
-  for (int i = 0; i < BLOCK_SIZE; i++)
-    for (int j = 0; j < BLOCK_SIZE; j++)
-    {
-      float accumul = 0;
-      for (int k = 0; k < BLOCK_SIZE; k++)
-      {
-        accumul += in_out[i*stride + k] * coeff[k*coeff_stride + j];
-      }
-      in_out[i*stride + j] = accumul;
-    }
-
+  float* t;
+  *t = *a;
+  *a = *a + *b;
+  *b = *t - *b;
 }
 
-__global__ void dct3d(float* d_gathered4dstack, int patch_size){
+// Integer log2
+__device__ __host__ long ilog2(long x)
+{
+  long l2 = 0;
+  for (; x; x >>= 1) ++l2;
+  return l2;
+}
+
+/**
+* Fast Walsh-Hadamard transform
+*/
+__device__ __host__ void fwht(float* data, int size)
+{
+  const long l2 = ilog2(size) - 1;
+
+  for (long i = 0; i < l2; ++i)
+  {
+    for (long j = 0; j < (1 << l2); j += 1 << (i + 1))
+      for (long k = 0; k < (1 << i); ++k)
+        whrotate(&data[j + k], &data[j + k + (1 << i)]);
+  }
+}
+
+__global__ void dct3d(float* d_gathered4dstack, int patch_size, uint gathered_size, uint* d_nstacks, uint* accumulated_nstacks){
   int x = threadIdx.x;
   int y = threadIdx.y;
   int z = threadIdx.z;
@@ -336,6 +353,20 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
   cube[z][y][x] = z_vec[0] * dct_coeff[z][0] + z_vec[1] * dct_coeff[z][1] + z_vec[2] * dct_coeff[z][2] + z_vec[3] * dct_coeff[z][3];
   __syncthreads();
   //////// WHT
+  if (z < gathered_size){
+    float group_vector[16];
+    int size = d_nstacks[z];
+    int group_start = accumulated_nstacks[z];
+    int wh_start_idx = (group_start*stride);
+    for (int i = 0; i < size; i++){
+      int gl_idx = wh_start_idx + (x + y*patch_size + i*patch_size*patch_size*patch_size);
+      group_vector[i] = d_gathered4dstack[gl_idx];
+    }
+    fwht(group_vector, size);
+    // Threshold
+
+  } //endif z<gathered_size
+  __syncthreads();
   ////////
   for (int i = 0; i < 4; ++i){
     z_vec[i] = cube[i][y][x];
@@ -353,11 +384,15 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
   d_gathered4dstack[idx] = cube[z][y][x];
 }
 
-void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size){
-  int size = gathered_size*patch_size*patch_size*patch_size;
-  float* golden_dct = new float[size];
-  checkCudaErrors(cudaMemcpy(golden_dct, d_gathered4dstack, sizeof(float)*size, cudaMemcpyDeviceToHost));
-  dct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size);
+void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks){
+  uint* accumulated_nstacks;
+  checkCudaErrors(cudaMalloc((void **)&accumulated_nstacks, sizeof(uint)*gathered_size));
+  thrust::device_ptr<uint> dt_accumulated_nstacks = thrust::device_pointer_cast(accumulated_nstacks);
+  thrust::device_ptr<uint> dt_nstacks = thrust::device_pointer_cast(d_nstacks);
+  thrust::inclusive_scan(dt_nstacks, dt_nstacks + gathered_size, dt_accumulated_nstacks);
+  accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
+
+  dct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size, gathered_size, d_nstacks, accumulated_nstacks);
   debug_kernel(d_gathered4dstack);
-  delete[] golden_dct;
+
 }

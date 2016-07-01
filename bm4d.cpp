@@ -33,7 +33,7 @@ std::vector<unsigned char> BM4D::run_first_step()
   //CImg<uchar> test1(base_volume.data(), width, height, deb_size, params.patch_size, 1); test1.display();
 
   // Perform 3D DCT
-  run_dct3d(d_gathered4dstack, gathered_size, params.patch_size);
+  run_dct3d(d_gathered4dstack, gathered_size, params.patch_size, d_nstacks_pow);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   //run_wht_ht_iwht();

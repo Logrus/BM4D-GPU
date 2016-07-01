@@ -49,7 +49,7 @@ void gather_cubes(const uchar* __restrict img,
                   int &gather_stack_sum); // TODO: remove
 
 // Perform 3D DCT
-void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size);
+void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks);
 // Do WHT in 4th dim + Hard Thresholding + IWHT
 void run_wht_ht_iwht();
 // Perform inverse 3D DCT
