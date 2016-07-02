@@ -33,8 +33,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
                         const uint3 tsize,
                         const Parameters params,
                         uint3float1 *d_stacks,
-                        uint *d_nstacks,
-                        uchar* out);
+                        uint *d_nstacks);
 
 
 // Gather cubes together
@@ -55,6 +54,13 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_siz
 // Perform inverse 3D DCT
 void run_idct3d(float* d_gathered4dstack, uint gathered_size, int patch_size);
 // Aggregate
-void run_aggregation();
+void run_aggregation(float* final_image, 
+                     const uint3 size,
+                     const uint3 tsize, 
+                     float* d_gathered4dstack, 
+                     uint3float1* d_stacks, 
+                     uint* d_nstacks, 
+                     float* group_weights,
+                     const Parameters params);
 
 void debug_kernel(float* tmp);

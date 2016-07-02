@@ -25,7 +25,19 @@ void __global__ k_debug_lookup_4dgathered_stack(float* gathered_stack4d){
     printf("%f ", gathered_stack4d[i]);
   }
 }
-
+__global__ void k_debug_lookup_int(int* gathered_stack4d){
+  for (int i = 0; i < 64 * 3; ++i){
+    if (!(i % 4)) printf("\n");
+    if (!(i % 16)) printf("------------\n");
+    if (!(i % 64)) printf("------------\n");
+    printf("%d ", gathered_stack4d[i]);
+  }
+}
+void debug_kernel_int(int* tmp){
+  k_debug_lookup_int << <1, 1 >> >(tmp);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+}
 void debug_kernel(float* tmp){
   k_debug_lookup_4dgathered_stack << <1, 1 >> >(tmp);
   cudaDeviceSynchronize();
@@ -98,8 +110,7 @@ __global__ void k_block_matching(const uchar* __restrict img,
                                  const uint3 tsize,
                                  const Parameters params,
 								                         uint3float1* d_stacks,
-								                         uint* d_nstacks,
-                                 uchar* out)
+								                         uint* d_nstacks)
 {
 
   for (int Idz = blockDim.z * blockIdx.z + threadIdx.z; Idz < tsize.z; Idz += blockDim.z*gridDim.z)
@@ -143,29 +154,21 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
                         const uint3 tsize,
                         const Parameters params,
 					                   uint3float1 *d_stacks,
-					                   uint *d_nstacks,
-                        uchar* out)
+					                   uint *d_nstacks)
 {
-	dim3 block(16, 16, 1);
+	dim3 block(32, 32, 1);
  //dim3 grid(size.x / block.x / params.step_size, size.y / block.y / params.step_size, 1);
  dim3 grid(20, 20, 1);
 
  // Debug verification
  std::cout << "Total number of reference patches " << (tsize.x*tsize.y*tsize.z) << std::endl;
 
-	//std::cout << "Grid x: " << grid.x << " y: " << grid.y << " z: " << grid.z << std::endl;
-	//std::cout << "Block x: " << block.x << " y: " << block.y << " z: " << block.z << std::endl;
-	//std::cout << "Warps per block: " << block.x * block.y * block.z / 32 << std::endl;
-	//std::cout << "Treads per block: " << block.x * block.y * block.z << std::endl;
- //std::cout << "Total threads: " << block.x*block.y*block.z*grid.x*grid.y*grid.z << std::endl;
-
  k_block_matching << <grid, block >> >(d_noisy_volume,
                                        size,
                                        tsize,
                                        params,
                                        d_stacks,
-                                       d_nstacks,
-                                       out);
+                                       d_nstacks);
 
  cudaDeviceSynchronize();
  checkCudaErrors(cudaGetLastError());
@@ -315,7 +318,6 @@ __global__ void dct3d(float* d_gathered4dstack, int patch_size){
 
 void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size){
   dct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size);
-  debug_kernel(d_gathered4dstack);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 }
@@ -365,7 +367,8 @@ __global__ void idct3d(float* d_gathered4dstack, int patch_size){
 
 void run_idct3d(float* d_gathered4dstack, uint gathered_size, int patch_size){
   idct3d << <gathered_size, dim3(4, 4, 4) >> > (d_gathered4dstack, patch_size);
-  debug_kernel(d_gathered4dstack);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
 }
 
 // (a,b) -> (a+b,a-b) without overflow
@@ -405,7 +408,7 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
                                   uint* d_nstacks_pow, 
                                   uint* accumulated_nstacks, 
                                   float* group_weights,
-                                  float* group_keys){
+                                  int* group_keys){
   int x = threadIdx.x;
   int y = threadIdx.y;
   int z = threadIdx.z;
@@ -427,9 +430,9 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
   group_keys[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = cuIdx+1;
   for (int i = 0; i < size; i++){
     group_vector[i] /= size; // normalize
-    if (fabs(group_vector[i]) > threshold) // less than threshold
+    if (fabs(group_vector[i]) > threshold)
     {
-      group_weights[cuIdx + x + y*patch_size + z*patch_size*patch_size] += 1;
+      group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] += 1;
     }
     else {
       group_vector[i] = 0;
@@ -453,24 +456,30 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_siz
   int groups = tsize.x*tsize.y*tsize.z;
   
 
-  float* group_weights, *group_keys, *dummy;
+  float* group_weights;
+  int *group_keys, *dummy;
   checkCudaErrors(cudaMalloc((void **)&group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
-  checkCudaErrors(cudaMalloc((void **)&group_keys, sizeof(float)*groups*patch_size*patch_size*patch_size));
-  checkCudaErrors(cudaMalloc((void **)&dummy, sizeof(float)*groups*patch_size*patch_size*patch_size));
+  checkCudaErrors(cudaMalloc((void **)&group_keys, sizeof(int)*groups*patch_size*patch_size*patch_size));
+  checkCudaErrors(cudaMalloc((void **)&dummy, sizeof(int)*groups*patch_size*patch_size*patch_size));
 
   k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, gathered_size, patch_size, d_nstacks_pow, accumulated_nstacks, group_weights, group_keys);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
-  //debug_kernel(group_weights);
-  debug_kernel(group_keys);
+
+
+  debug_kernel(group_weights);
+  debug_kernel_int(group_keys);
   float* out_weights;
   checkCudaErrors(cudaMalloc((void **)&out_weights, sizeof(float)*groups*patch_size*patch_size*patch_size));
-  thrust::device_ptr<float> dt_dummy = thrust::device_pointer_cast(dummy);
+
+  // Keys
+  thrust::device_ptr<int> dt_dummy = thrust::device_pointer_cast(dummy);
+  thrust::device_ptr<int> dt_group_keys = thrust::device_pointer_cast(group_keys);
+  // Data
   thrust::device_ptr<float> dt_out_weights = thrust::device_pointer_cast(out_weights);
-  thrust::device_ptr<float> dt_group_keys = thrust::device_pointer_cast(group_keys);
   thrust::device_ptr<float> dt_group_weights = thrust::device_pointer_cast(group_weights);
 
-  thrust::reduce_by_key(dt_group_keys, dt_group_keys + groups*patch_size*patch_size*patch_size, dt_group_weights, dt_dummy, dt_out_weights);
+  //thrust::reduce_by_key(dt_group_keys, dt_group_keys + 64, dt_group_weights, dt_dummy, dt_out_weights);
   out_weights = thrust::raw_pointer_cast(dt_out_weights);
   debug_kernel(out_weights);
   checkCudaErrors(cudaFree(accumulated_nstacks));
@@ -478,4 +487,88 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_siz
   checkCudaErrors(cudaFree(dummy));
   checkCudaErrors(cudaFree(group_keys));
 
+}
+__global__ void k_aggregation(float* d_denoised_volume, 
+                              float* d_weights_volume,
+                            const uint3 size,
+                            const uint3 tsize,
+                            float* d_gathered4dstack, 
+                            uint3float1* d_stacks, 
+                            uint* d_nstacks, 
+                            float* group_weights, 
+                            const Parameters params){
+
+  uint array_size = (tsize.x*tsize.y*tsize.z);
+  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < array_size; i += blockDim.x*gridDim.x){
+
+    uint3float1 ref = d_stacks[i];
+    float weight = group_weights[i];
+    int cube_size = params.patch_size*params.patch_size*params.patch_size;
+
+    for (int z = 0; z < params.patch_size; ++z)
+      for (int y = 0; y < params.patch_size; ++y)
+        for (int x = 0; x < params.patch_size; ++x){
+          int rx = x + ref.x;
+          int ry = y + ref.y;
+          int rz = z + ref.z;
+
+          if (rx < 0 || rx >= size.x) continue;
+          if (ry < 0 || ry >= size.y) continue;
+          if (rz < 0 || rz >= size.z) continue;
+
+          int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
+          int stack_idx = i*cube_size + (x)+(y + z*params.patch_size)*params.patch_size;
+          //d_denoised_volume[img_idx] = d_gathered4dstack[stack_idx];
+          atomicAdd(d_denoised_volume + img_idx, d_gathered4dstack[stack_idx]);
+          atomicAdd(d_weights_volume + img_idx, weight);
+        }
+  }
+}
+
+__global__ void k_normalizer(float* d_denoised_volume,
+                             const float* __restrict d_weights_volume,
+                             const uint3 size)
+{
+  for (int Idz = blockDim.z * blockIdx.z + threadIdx.z; Idz < size.z; Idz += blockDim.z*gridDim.z)
+    for (int Idy = blockDim.y * blockIdx.y + threadIdx.y; Idy < size.y; Idy += blockDim.y*gridDim.y)
+      for (int Idx = blockDim.x * blockIdx.x + threadIdx.x; Idx < size.x; Idx += blockDim.x*gridDim.x)
+      {
+        int idx = Idx + Idy*size.x + Idx*size.x*size.y;
+        float tmp = d_denoised_volume[idx];
+        __syncthreads();
+        d_denoised_volume[idx] = d_denoised_volume[idx] / d_weights_volume[idx];
+      }
+}
+
+void run_aggregation(float* final_image,
+                     const uint3 size, 
+                     const uint3 tsize, 
+                     float* d_gathered4dstack, 
+                     uint3float1* d_stacks, 
+                     uint* d_nstacks, 
+                     float* group_weights,
+                     const Parameters params)
+{
+  int im_size = size.x*size.y*size.z;
+  int groups = tsize.x*tsize.y*tsize.z;
+  float* d_junk_weights;
+  float* junk_weights = new float[groups];
+  for (int i = 0; i < groups; ++i) { junk_weights[i] = 1.0; }
+  checkCudaErrors(cudaMalloc((void **)&d_junk_weights, sizeof(float)*groups));
+  checkCudaErrors(cudaMemcpy(d_junk_weights, junk_weights, sizeof(float)*groups, cudaMemcpyHostToDevice));
+
+  float* d_denoised_volume, *d_weights_volume;
+  checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
+  checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
+
+  k_aggregation << <20, 1024 >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_junk_weights, params);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+  k_normalizer << <20, dim3(32, 32, 1) >> >(d_denoised_volume, d_weights_volume, size);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+
+  checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaFree(d_junk_weights));
+  delete[] junk_weights;
 }

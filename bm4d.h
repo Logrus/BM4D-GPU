@@ -18,7 +18,6 @@ private:
 
   // Device variables
   uchar* d_noisy_volume;
-  uchar *d_denoised_volume;
   float* d_gathered4dstack;
   uint* d_nstacks_pow;
   uint3float1* d_stacks;
@@ -51,7 +50,6 @@ public:
       height(height),
       depth(depth),
       d_noisy_volume(NULL),
-      //d_denoised_volume(NULL),
       d_gathered4dstack(NULL),
       d_stacks(NULL),
       d_nstacks_pow(NULL),
