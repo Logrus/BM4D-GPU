@@ -3,6 +3,8 @@
 #include <thrust/device_ptr.h>
 #include <thrust/copy.h>
 #include <thrust/remove.h>
+#include <thrust/reduce.h>
+#include <thrust/execution_policy.h>
 #include <math.h>
 
 __global__ void k_debug_lookup_stacks(uint3float1 * d_stacks, int total_elements){
@@ -402,7 +404,8 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
                                   int patch_size, 
                                   uint* d_nstacks_pow, 
                                   uint* accumulated_nstacks, 
-                                  float* group_weights){
+                                  float* group_weights,
+                                  float* group_keys){
   int x = threadIdx.x;
   int y = threadIdx.y;
   int z = threadIdx.z;
@@ -420,12 +423,13 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
   fwht(group_vector, size);
   //// Threshold
   float threshold = 2.7 * sqrtf((float)size);
-  group_weights[cuIdx + x + y*patch_size + z*patch_size*patch_size] = 0;
+  group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = 0;
+  group_keys[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = cuIdx+1;
   for (int i = 0; i < size; i++){
     group_vector[i] /= size; // normalize
     if (fabs(group_vector[i]) > threshold) // less than threshold
     {
-      group_weights += 1;
+      group_weights[cuIdx + x + y*patch_size + z*patch_size*patch_size] += 1;
     }
     else {
       group_vector[i] = 0;
@@ -447,18 +451,31 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_siz
   thrust::exclusive_scan(dt_nstacks, dt_nstacks + gathered_size, dt_accumulated_nstacks);
   accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
   int groups = tsize.x*tsize.y*tsize.z;
-  std::cout << groups << std::endl;
+  
 
-  float* group_weights;
+  float* group_weights, *group_keys, *dummy;
   checkCudaErrors(cudaMalloc((void **)&group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
+  checkCudaErrors(cudaMalloc((void **)&group_keys, sizeof(float)*groups*patch_size*patch_size*patch_size));
+  checkCudaErrors(cudaMalloc((void **)&dummy, sizeof(float)*groups*patch_size*patch_size*patch_size));
 
-  k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, gathered_size, patch_size, d_nstacks_pow, accumulated_nstacks, group_weights);
+  k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, gathered_size, patch_size, d_nstacks_pow, accumulated_nstacks, group_weights, group_keys);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
+  //debug_kernel(group_weights);
+  debug_kernel(group_keys);
+  float* out_weights;
+  checkCudaErrors(cudaMalloc((void **)&out_weights, sizeof(float)*groups*patch_size*patch_size*patch_size));
+  thrust::device_ptr<float> dt_dummy = thrust::device_pointer_cast(dummy);
+  thrust::device_ptr<float> dt_out_weights = thrust::device_pointer_cast(out_weights);
+  thrust::device_ptr<float> dt_group_keys = thrust::device_pointer_cast(group_keys);
+  thrust::device_ptr<float> dt_group_weights = thrust::device_pointer_cast(group_weights);
 
-
-
+  thrust::reduce_by_key(dt_group_keys, dt_group_keys + groups*patch_size*patch_size*patch_size, dt_group_weights, dt_dummy, dt_out_weights);
+  out_weights = thrust::raw_pointer_cast(dt_out_weights);
+  debug_kernel(out_weights);
   checkCudaErrors(cudaFree(accumulated_nstacks));
   checkCudaErrors(cudaFree(group_weights));
+  checkCudaErrors(cudaFree(dummy));
+  checkCudaErrors(cudaFree(group_keys));
 
 }
