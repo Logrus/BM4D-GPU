@@ -18,11 +18,12 @@ private:
 
   // Device variables
   uchar* d_noisy_volume;
-  //uchar *d_denoised_volume;
+  uchar *d_denoised_volume;
   float* d_gathered4dstack;
   uint* d_nstacks_pow;
   uint3float1* d_stacks;
   uint* d_nstacks;
+  float* d_group_weights;
   int width, height, depth, size;
   int twidth, theight, tdepth, tsize;
   uint gather_stack_sum;

@@ -27,16 +27,12 @@ std::vector<unsigned char> BM4D::run_first_step()
   gatheringcubes.stop(); std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
 
   debug_kernel(d_gathered4dstack);
-  //base_volume.resize(deb_size*params.patch_size*params.patch_size*params.patch_size);
-  //std::cout << base_volume.size() << std::endl;
-  //checkCudaErrors(cudaMemcpy((void*)base_volume.data(), (void*)d_gathered4dstack, sizeof(uchar)*base_volume.size(), cudaMemcpyDeviceToHost));
-  //CImg<uchar> test1(base_volume.data(), width, height, deb_size, params.patch_size, 1); test1.display();
 
   // Perform 3D DCT
   run_dct3d(d_gathered4dstack, gathered_size, params.patch_size);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
-  //run_wht_ht_iwht();
+  run_wht_ht_iwht(d_gathered4dstack, gathered_size, params.patch_size, d_nstacks_pow, make_uint3(twidth, theight, tdepth));
 
   // Perform inverse 3D DCT
   run_idct3d(d_gathered4dstack, gathered_size, params.patch_size);
