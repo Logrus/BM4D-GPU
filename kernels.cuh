@@ -32,35 +32,36 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
                         const uint3 size,
                         const uint3 tsize,
                         const Parameters params,
-                        uint3float1 *d_stacks,
-                        uint *d_nstacks);
+                        uint3float1* d_stacks,
+                        uint* d_nstacks);
 
 
 // Gather cubes together
 void gather_cubes(const uchar* __restrict img,
-                  const uint3 size,
-                  const uint3 tsize,
-                  const Parameters params,
-                  uint3float1* d_stacks,
-                  const uint* __restrict d_nstacks,
-                  float* &d_gathered4dstack,
-                  uint* d_nstacks_pow,
-                  int &gather_stack_sum); // TODO: remove
+  const uint3 size,
+  const uint3 tsize,
+  const Parameters params,
+  uint3float1* &d_stacks,
+  const uint* __restrict d_nstacks,
+  float* &d_gathered4dstack,
+  uint* d_nstacks_pow,
+  int &gather_stacks_sum);
 
 // Perform 3D DCT
-void run_dct3d(float* d_gathered4dstack, uint gathered_size, int patch_size);
+void run_dct3d(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size);
 // Do WHT in 4th dim + Hard Thresholding + IWHT
-void run_wht_ht_iwht(float* d_gathered4dstack, uint gathered_size, int patch_size, uint* d_nstacks_pow, const uint3 tsize);
+void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size, uint* d_nstacks_pow, const uint3 tsize);
 // Perform inverse 3D DCT
-void run_idct3d(float* d_gathered4dstack, uint gathered_size, int patch_size);
+void run_idct3d(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size);
 // Aggregate
-void run_aggregation(float* final_image, 
-                     const uint3 size,
-                     const uint3 tsize, 
-                     float* d_gathered4dstack, 
-                     uint3float1* d_stacks, 
-                     uint* d_nstacks, 
-                     float* group_weights,
-                     const Parameters params);
+void run_aggregation(float* final_image,
+  const uint3 size,
+  const uint3 tsize,
+  const float* d_gathered4dstack,
+  uint3float1* d_stacks,
+  uint* d_nstacks,
+  float* group_weights,
+  const Parameters params,
+  int gather_stacks_sum);
 
 void debug_kernel(float* tmp);

@@ -1,6 +1,6 @@
 #include "bm4d.h"
 
-std::vector<unsigned char> BM4D::run_first_step()
+std::vector<uchar> BM4D::run_first_step()
 {
 
   Stopwatch copyingtodevice(true);
@@ -10,38 +10,36 @@ std::vector<unsigned char> BM4D::run_first_step()
   std::cout << "Width " << width << " height " << height << " depth " << depth << std::endl;
   std::cout << "Size " <<size << std::endl;
 
+  uint3 im_size = make_uint3(width, height, depth);
+  uint3 tr_size = make_uint3(twidth, theight, tdepth); // Truncated size, with some step for ref patches
+
   // Do block matching
   Stopwatch blockmatching(true);
-  run_block_matching(d_noisy_volume, make_uint3(width, height, depth), make_uint3(twidth, theight, tdepth), params, d_stacks, d_nstacks);
+  run_block_matching(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks);
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together
-  int gathered_size; 
+  int gather_stacks_sum; 
   Stopwatch gatheringcubes(true);
-  gather_cubes(d_noisy_volume, make_uint3(width, height, depth), make_uint3(twidth, theight, tdepth), params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, gathered_size);
-  std::cout << "Acquied size " << gathered_size << std::endl;
+  gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, gather_stacks_sum);
+  std::cout << "Acquied size " << gather_stacks_sum << std::endl;
   gatheringcubes.stop(); std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
   debug_kernel(d_gathered4dstack);
 
   // Perform 3D DCT
-  run_dct3d(d_gathered4dstack, gathered_size, params.patch_size);
-  debug_kernel(d_gathered4dstack);
+  run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  //debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
-  run_wht_ht_iwht(d_gathered4dstack, gathered_size, params.patch_size, d_nstacks_pow, make_uint3(twidth, theight, tdepth));
+  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, make_uint3(twidth, theight, tdepth));
 
   // Perform inverse 3D DCT
-  run_idct3d(d_gathered4dstack, gathered_size, params.patch_size);
+  run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
 
   // Aggregate
-  float* final_image = new float[size];
-  run_aggregation(final_image, make_uint3(width, height, depth), make_uint3(twidth, theight, tdepth), d_gathered4dstack, d_stacks, d_nstacks_pow, d_group_weights, params);
-
-  // d_noisy_volume -> working_image
-  //Stopwatch copyingtohost(true);
-  //copy_image_to_host();
-  //copyingtohost.stop(); std::cout<<"Copying to host took: "<<copyingtohost.getSeconds()<<std::endl;
-  //CImg<float> test2(noisy_volume.data(), width, height, depth, 1); test2.display();
+  float* final_image = new float[width*height*depth];
+  memset(final_image, 0.0, sizeof(float)*width*height*depth);
+  run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks_pow, d_group_weights, params, gather_stacks_sum);
 
   CImg<float> test2(final_image, width, height, depth, 1); test2.display();
   for (int i = 0; i < size; i++){ noisy_volume[i] = static_cast<uchar>(final_image[i]); }

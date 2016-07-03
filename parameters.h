@@ -4,7 +4,7 @@
 #include <iomanip>
 
 struct Parameters{
-  std::string filename = "data/t.txt";
+  std::string filename = "data2/t.txt";
   int   patch_size=4;   // Patch size
   int   window_size=5; // Search window (size=window_size)
   int   step_size=3;

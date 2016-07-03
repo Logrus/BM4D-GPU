@@ -7,12 +7,27 @@
 #include "stopwatch.hpp"
 using namespace cimg_library;
 
+float psnr(std::vector<unsigned char>& gt, std::vector<unsigned char>& noisy)
+{
+  float max_signal = 255;
+  float sqr_err = 0;
+  for (int i = 0; i<gt.size(); ++i)
+  {
+    float diff = gt[i] - noisy[i];
+    sqr_err += diff*diff;
+  }
+  float mse = sqr_err / gt.size();
+  float psnr = 10.f*log10(max_signal*max_signal / mse);
+  return psnr;
+}
+
 int main(int argc, char *argv[]){
   // Take parameters
   Parameters p;
   read_parameters(argc, argv, p);
 
   // Define variables
+  std::vector<unsigned char> gt;
   std::vector<unsigned char> noisy_image;
   int width, height, depth;
 
@@ -22,6 +37,10 @@ int main(int argc, char *argv[]){
   reader.read(p.filename, noisy_image, width, height, depth);
   loading_file.stop(); std::cout<<"Loading file took: "<<loading_file.getSeconds()<<std::endl;
   std::cout << "Volume size: (" << width << ", " << height << ", " << depth<< ") total: " << width*height*depth << std::endl;
+  CImg<float> test2(noisy_image.data(), width, height, depth, 1); test2.display();
+
+  reader.read("gt/t.txt", gt, width, height, depth);
+
 
   // Run first step of BM4D
   Stopwatch bm4d_timing(true); // true - start right away
@@ -31,4 +50,7 @@ int main(int argc, char *argv[]){
   
   // Save image
   CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
+  std::cout << "PSNR noisy: " << psnr(gt, denoised_image) << std::endl;
+  std::cout << "PSNR denoised: " << psnr(gt, noisy_image) << std::endl;
+  std::cout << "PSNR reconstructed: " << psnr(noisy_image, denoised_image) << std::endl;
 }
