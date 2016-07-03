@@ -1,4 +1,4 @@
-150
+10
 gstennis_0000.pgm
 gstennis_0001.pgm
 gstennis_0002.pgm

@@ -134,7 +134,7 @@ __global__ void k_block_matching(const uchar* __restrict img,
         for (int wy = wyb; wy <= wye; wy++)
           for (int wx = wxb; wx <= wxe; wx++){
             float w = dist(img, size, ref, make_uint3(wx, wy, wz), params.patch_size);
-            printf("Dist %f\n", w);
+            //printf("Dist %f\n", w);
             
             if (w < params.sim_th){
               add_stack(&d_stacks[(Idx + (Idy + Idz* tsize.y)*tsize.x)*params.maxN],
@@ -236,7 +236,7 @@ void gather_cubes(const uchar* __restrict img,
   gather_stacks_sum = thrust::reduce(dt_nstacks_pow, dt_nstacks_pow + array_size);
   std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
    
-  k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
   cudaDeviceSynchronize();
   // Make a compaction
   uint3float1 * d_stacks_compacted;
@@ -249,7 +249,7 @@ void gather_cubes(const uchar* __restrict img,
   uint3float1* tmp = d_stacks;
   d_stacks = d_stacks_compacted;
   checkCudaErrors(cudaFree(tmp));
-  k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
   cudaDeviceSynchronize();
 
   // Allocate memory for gathered stacks uchar
@@ -480,10 +480,10 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   checkCudaErrors(cudaGetLastError());
 
   std::cout << "Weights before"<<std::endl;
-  debug_kernel(d_group_weights);
+  //debug_kernel(d_group_weights);
   k_sum_group_weights << <groups, dim3(1, 1, 1) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, groups, patch_size);
   std::cout << "Weights after" << std::endl;
-  debug_kernel(d_group_weights);
+  //debug_kernel(d_group_weights);
 
   checkCudaErrors(cudaFree(d_accumulated_nstacks));
 }
@@ -554,7 +554,7 @@ __global__ void k_aggregation(float* d_denoised_volume,
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < array_size; i += blockDim.x*gridDim.x){
 
     uint3float1 ref = d_stacks[i];
-    printf("ref: %d %d %d\n", ref.x, ref.y, ref.z);
+    //printf("ref: %d %d %d\n", ref.x, ref.y, ref.z);
     float weight = 1.0;//group_weights[i];
     int cube_size = params.patch_size*params.patch_size*params.patch_size;
 
