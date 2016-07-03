@@ -410,8 +410,10 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
                                   uint* d_nstacks_pow,
                                   uint* accumulated_nstacks,
                                   float* d_group_weights){
-
-  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += blockDim.x*gridDim.x){
+  int counter = 0;
+  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += gridDim.x){
+    printf("Counter %d\n", counter);
+    counter++;
     if (cuIdx >= groups) return;
 
     int x = threadIdx.x;
@@ -421,6 +423,7 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
     int stride = patch_size*patch_size*patch_size;
     float group_vector[16];
     int size = d_nstacks_pow[cuIdx];
+    if (size == 1) return;
     int group_start = accumulated_nstacks[cuIdx];
     //printf("\nSize: %d Group start: %d \n", size, group_start);
 
@@ -428,6 +431,7 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
       int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
       group_vector[i] = d_gathered4dstack[gl_idx];
     }
+    
     fwht(group_vector, size);
     //// Threshold
     float threshold = 2.7 * sqrtf((float)size);
@@ -473,9 +477,10 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   thrust::exclusive_scan(dt_nstacks, dt_nstacks + gather_stacks_sum, dt_accumulated_nstacks);
   d_accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
   int groups = tsize.x*tsize.y*tsize.z;
-  
+  std::cout << "Groups " << groups << std::endl;
   checkCudaErrors(cudaMalloc((void **)&d_group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
-  k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, groups, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights);
+  checkCudaErrors(cudaMemset(d_group_weights, 0.0, sizeof(float)*groups*patch_size*patch_size*patch_size));
+  k_run_wht_ht_iwht << <1, dim3(4, 4, 4) >> > (d_gathered4dstack, groups, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 

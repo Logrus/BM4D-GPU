@@ -10,8 +10,6 @@ std::vector<uchar> BM4D::run_first_step()
   assert(size == noisy_volume.size());
   checkCudaErrors(cudaMalloc((void**)&d_noisy_volume, sizeof(uchar)*size));
   checkCudaErrors(cudaMemcpy((void*)d_noisy_volume, (void*)noisy_volume.data(), sizeof(uchar)*size, cudaMemcpyHostToDevice));
-
-  //copy_image_to_device();
   copyingtodevice.stop(); std::cout<<"Copying to device took: "<<copyingtodevice.getSeconds()<<std::endl;
   
   std::cout << "Width " << width << " height " << height << " depth " << depth << std::endl;
