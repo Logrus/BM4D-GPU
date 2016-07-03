@@ -34,23 +34,29 @@ std::vector<uchar> BM4D::run_first_step()
   //debug_kernel(d_gathered4dstack);
 
   // Perform 3D DCT
+  Stopwatch dct_forward(true);
   run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  dct_forward.stop(); std::cout << "3D DCT forwars took: " << dct_forward.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   float* d_group_weights;
+  Stopwatch wht_t(true);
   run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, tr_size, d_group_weights);
+  wht_t.stop(); std::cout << "WHT took: " << wht_t.getSeconds() << std::endl;
 
   // Perform inverse 3D DCT
+  Stopwatch dct_backward(true);
   run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  dct_backward.stop(); std::cout << "3D DCT forwars took: " << dct_backward.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
   // Aggregate
   float* final_image = new float[width*height*depth];
   memset(final_image, 0.0, sizeof(float)*width*height*depth);
+  Stopwatch aggregation_t(true);
   run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks_pow, d_group_weights, params, gather_stacks_sum);
-
-  //CImg<float> test2(final_image, width, height, depth, 1); test2.display();
+  aggregation_t.stop(); std::cout << "3D DCT forwars took: " << aggregation_t.getSeconds() << std::endl;
   for (int i = 0; i < size; i++){ noisy_volume[i] = static_cast<uchar>(final_image[i]); }
   delete[] final_image;
   return noisy_volume;
