@@ -37,7 +37,7 @@ int main(int argc, char *argv[]){
   reader.read(p.filename, noisy_image, width, height, depth);
   loading_file.stop(); std::cout<<"Loading file took: "<<loading_file.getSeconds()<<std::endl;
   std::cout << "Volume size: (" << width << ", " << height << ", " << depth<< ") total: " << width*height*depth << std::endl;
-  CImg<float> test2(noisy_image.data(), width, height, depth, 1); test2.display();
+  //CImg<float> test2(noisy_image.data(), width, height, depth, 1); test2.display();
 
   reader.read("gt/t.txt", gt, width, height, depth);
 
