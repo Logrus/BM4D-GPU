@@ -50,7 +50,7 @@ int main(int argc, char *argv[]){
   
   // Save image
   CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
-  std::cout << "PSNR noisy: " << psnr(gt, noisy_image) << std::endl;
-  std::cout << "PSNR denoised: " << psnr(gt, denoised_image) << std::endl;
+  //std::cout << "PSNR noisy: " << psnr(gt, noisy_image) << std::endl;
+  //std::cout << "PSNR denoised: " << psnr(gt, denoised_image) << std::endl;
   std::cout << "PSNR reconstructed: " << psnr(noisy_image, denoised_image) << std::endl;
 }

@@ -4,11 +4,11 @@
 #include <iomanip>
 
 struct Parameters{
-  std::string filename = "data2/t.txt";
+  std::string filename = "data/t.txt";
   int   patch_size=4;   // Patch size
   int   window_size=5; // Search window (size=window_size)
   int   step_size=3;
-  float sim_th=800.0;   // Similarity threshold for the first step
+  float sim_th=2500.0;   // Similarity threshold for the first step
   int   maxN=16;          // Maximal number of the patches in one group
   float hard_th=2.7; // Hard schrinkage threshold
   float sigma=25.0;

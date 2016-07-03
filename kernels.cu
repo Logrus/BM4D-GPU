@@ -95,11 +95,11 @@ __device__ float dist(const uchar* __restrict img, const uint3 size, const uint3
           int cx = max(0, min(x + cmp.x, size.x - 1));
           int cy = max(0, min(y + cmp.y, size.y - 1));
           int cz = max(0, min(z + cmp.z, size.z - 1));
-	  //printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
+	  printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
           float tmp = (img[(rx) + (ry)*size.x + (rz)*size.x*size.y] - img[(cx) + (cy)*size.x + (cz)*size.x*size.y]);
           diff += tmp*tmp;
      }
-  return diff;
+  return diff/(k*k*k);
 }
 
 __global__ void k_block_matching(const uchar* __restrict img,
@@ -134,6 +134,7 @@ __global__ void k_block_matching(const uchar* __restrict img,
         for (int wy = wyb; wy <= wye; wy++)
           for (int wx = wxb; wx <= wxe; wx++){
             float w = dist(img, size, ref, make_uint3(wx, wy, wz), params.patch_size);
+            printf("Dist %f\n", w);
             
             if (w < params.sim_th){
               add_stack(&d_stacks[(Idx + (Idy + Idz* tsize.y)*tsize.x)*params.maxN],
@@ -160,7 +161,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
   // Debug verification
   std::cout << "Total number of reference patches " << (tsize.x*tsize.y*tsize.z) << std::endl;
 
-  k_block_matching << <grid, block >> >(d_noisy_volume,
+  k_block_matching << <grid, block >> >(d_noisy_volume, 
                                        size,
                                        tsize,
                                        params,
@@ -169,6 +170,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
 
  cudaDeviceSynchronize();
  checkCudaErrors(cudaGetLastError());
+ exit(1);
 }
 
 __global__ void k_nstack_to_pow(const uint* __restrict d_nstacks, uint* d_nstacks_pow, const int size){
