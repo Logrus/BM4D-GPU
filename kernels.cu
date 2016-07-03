@@ -170,7 +170,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
 
  cudaDeviceSynchronize();
  checkCudaErrors(cudaGetLastError());
- exit(1);
+ 
 }
 
 __global__ void k_nstack_to_pow(const uint* __restrict d_nstacks, uint* d_nstacks_pow, const int size){

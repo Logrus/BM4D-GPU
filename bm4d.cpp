@@ -28,7 +28,7 @@ std::vector<uchar> BM4D::run_first_step()
 
   // Perform 3D DCT
   run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
-  //debug_kernel(d_gathered4dstack);
+  debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   float* d_group_weights;
