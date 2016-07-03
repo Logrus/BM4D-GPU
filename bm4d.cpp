@@ -31,7 +31,8 @@ std::vector<uchar> BM4D::run_first_step()
   //debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
-  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, make_uint3(twidth, theight, tdepth));
+  float* d_group_weights;
+  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, tr_size, d_group_weights);
 
   // Perform inverse 3D DCT
   run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);

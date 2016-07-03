@@ -234,7 +234,7 @@ void gather_cubes(const uchar* __restrict img,
   gather_stacks_sum = thrust::reduce(dt_nstacks_pow, dt_nstacks_pow + array_size);
   std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
    
-  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+  k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
 
   // Make a compaction
   uint3float1 * d_stacks_compacted;
@@ -247,7 +247,7 @@ void gather_cubes(const uchar* __restrict img,
   uint3float1* tmp = d_stacks;
   d_stacks = d_stacks_compacted;
   checkCudaErrors(cudaFree(tmp));
-  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+  k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
   cudaDeviceSynchronize();
 
   // Allocate memory for gathered stacks uchar
@@ -402,12 +402,12 @@ __device__ __host__ void fwht(float* data, int size)
   }
 }
 
-__global__ void k_run_wht_ht_iwht(float* d_gathered4dstack, 
-                                  uint gather_stacks_sum, 
-                                  int patch_size, 
-                                  uint* d_nstacks_pow, 
-                                  uint* accumulated_nstacks, 
-                                  float* group_weights){
+__global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
+  uint gather_stacks_sum,
+  int patch_size,
+  uint* d_nstacks_pow,
+  uint* accumulated_nstacks,
+  float* d_group_weights){
 
   for (int cuIdx = blockIdx.x; cuIdx < gather_stacks_sum; cuIdx += blockDim.x*gridDim.x){
     if (cuIdx >= gather_stacks_sum) return;
@@ -428,35 +428,42 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
     }
     fwht(group_vector, size);
     //// Threshold
-    float threshold = 20.7 * sqrtf((float)size);
-    group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = 0;
+    float threshold = 0 * sqrtf((float)size);
+    d_group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = 0;
     for (int i = 0; i < size; i++){
       group_vector[i] /= size; // normalize
-      //if (fabs(group_vector[i]) > threshold)
-      //{
-      //  group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] += 1;
-      //}
-      //else {
-      //  group_vector[i] = 0;
-      //}
+      if (fabs(group_vector[i]) > threshold)
+      {
+        d_group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] += 1;
+      }
+      else {
+        group_vector[i] = 0;
+      }
+      //// Inverse fwht
+      fwht(group_vector, size);
+      for (int i = 0; i < size; i++){
+        int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
+        d_gathered4dstack[gl_idx] = group_vector[i];
+      }
     }
-    //// Inverse fwht
-    fwht(group_vector, size);
-    for (int i = 0; i < size; i++){
-      int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
-      d_gathered4dstack[gl_idx] = group_vector[i];
+  }
+}
+__global__ void k_sum_group_weights(float* d_group_weights, uint* d_accumulated_nstacks, uint* d_nstacks, uint groups, int patch_size){
+  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += blockDim.x*gridDim.x){
+    if (cuIdx >= groups) return;
+    int stride = patch_size*patch_size*patch_size;
+    float counter = 0;
+    for (int i=0;i<stride; ++i)
+    {
+      int idx = cuIdx*stride + i;
+      counter+=d_group_weights[idx];
     }
-    group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = 1.0 / group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size];
+    __syncthreads();
+    d_group_weights[cuIdx*stride] = 1.0/(float)counter;
   }
 }
 
-__global__ void k_sum_group_weights(float* d_group_weights, uint* d_accumulated_nstacks, uint* d_nstacks, uint gather_stacks_sum){
-  for (int cuIdx = blockIdx.x; cuIdx < gather_stacks_sum; cuIdx += blockDim.x*gridDim.x){
-    if (cuIdx >= gather_stacks_sum) return;
-  }
-}
-
-void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size, uint* d_nstacks_pow, const uint3 tsize){
+void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size, uint* d_nstacks_pow, const uint3 tsize, float* &d_group_weights){
   uint* d_accumulated_nstacks;
   checkCudaErrors(cudaMalloc((void **)&d_accumulated_nstacks, sizeof(uint)*gather_stacks_sum));
   thrust::device_ptr<uint> dt_accumulated_nstacks = thrust::device_pointer_cast(d_accumulated_nstacks);
@@ -465,35 +472,55 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   d_accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
   int groups = tsize.x*tsize.y*tsize.z;
   
-
-  float* d_group_weights;
   checkCudaErrors(cudaMalloc((void **)&d_group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
   k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, gather_stacks_sum, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 
-  k_sum_group_weights << <groups, dim3(4, 4, 4) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, gather_stacks_sum);
-  //debug_kernel(group_weights);
+  std::cout << "Weights before"<<std::endl;
+  debug_kernel(d_group_weights);
+  k_sum_group_weights << <groups, dim3(1, 1, 1) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, groups, patch_size);
+  std::cout << "Weights after" << std::endl;
+  debug_kernel(d_group_weights);
   //debug_kernel_int(group_keys);
-  float* out_weights;
-  checkCudaErrors(cudaMalloc((void **)&out_weights, sizeof(float)*groups*patch_size*patch_size*patch_size));
 
   //debug_kernel(out_weights);
   checkCudaErrors(cudaFree(d_accumulated_nstacks));
-  checkCudaErrors(cudaFree(d_group_weights));
-
 }
 
-void aggregation_cpu(float* image_vol, float* weights_vol, uint3 size, uint3 tsize, int gather_stacks_sum, uint3float1* stacks, float* gathered_stacks){
+void aggregation_cpu(float* image_vol,
+                     float* weights_vol,
+                     float* group_weights,
+                     uint3 size, 
+                     uint3 tsize,
+                     int gather_stacks_sum,
+                     uint3float1* stacks,
+                     uint* nstacks,
+                     float* gathered_stacks,
+                     int patch_size){
+
   int all_cubes = gather_stacks_sum;
-  int patch_size = 4;
-  int stride = 4 * 4 * 4;
+  int stride = patch_size*patch_size*patch_size;
+
+  int cubes_so_far = 0;
+  int groupId = 0; // Iterator over group numbers
 
   for (int i = 0; i < all_cubes; ++i){
     uint3float1 ref = stacks[i];
-    for (int z = 0; z < 4; ++z)
-      for (int y = 0; y < 4; ++y)
-        for (int x = 0; x < 4; ++x){
+
+    uint cubes_in_group = nstacks[groupId];
+    if ((i - cubes_so_far)==cubes_in_group) {
+      cubes_so_far += cubes_in_group;
+      //std::cout << "cubes in a grouo " << cubes_in_group << std::endl;
+      groupId++;
+    }
+
+    float weight = group_weights[groupId*stride];
+    //std::cout << "Weight: " << weight << std::endl;
+
+    for (int z = 0; z < patch_size; ++z)
+      for (int y = 0; y < patch_size; ++y)
+        for (int x = 0; x < patch_size; ++x){
           int rx = x + ref.x;
           int ry = y + ref.y;
           int rz = z + ref.z;
@@ -502,8 +529,8 @@ void aggregation_cpu(float* image_vol, float* weights_vol, uint3 size, uint3 tsi
           if (rz < 0 || rz >= size.z) continue;
           //std::cout << image_vol[rx + ry*size.x + rz*size.x*size.y] << std::endl;
           float tmp = gathered_stacks[i*stride + x + y*patch_size + z*patch_size*patch_size];
-          image_vol[rx + ry*size.x + rz*size.x*size.y] += tmp;
-          weights_vol[rx + ry*size.x + rz*size.x*size.y] += 1.0;
+          image_vol[rx + ry*size.x + rz*size.x*size.y] += tmp*weight;
+          weights_vol[rx + ry*size.x + rz*size.x*size.y] += weight;
         }
   }
 
@@ -578,30 +605,32 @@ void run_aggregation(float* final_image,
                      const float* d_gathered4dstack, 
                      uint3float1* d_stacks, 
                      uint* d_nstacks, 
-                     float* group_weights,
+                     float* d_group_weights,
                      const Parameters params,
                      int gather_stacks_sum)
 {
   int im_size = size.x*size.y*size.z;
   int groups = tsize.x*tsize.y*tsize.z;
-  float* d_junk_weights;
-  float* junk_weights = new float[im_size];
-  for (int i = 0; i < im_size; ++i) { junk_weights[i] = 0.0; }
-  //checkCudaErrors(cudaMalloc((void **)&d_junk_weights, sizeof(float)*groups));
-  //checkCudaErrors(cudaMemcpy(d_junk_weights, junk_weights, sizeof(float)*groups, cudaMemcpyHostToDevice));
+  int stride = params.patch_size*params.patch_size*params.patch_size;
 
-  float* d_denoised_volume, *d_weights_volume;
-  checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
-  checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
 
-  //float* image_vol = new float[im_size];
+
   uint3float1* stacks = new uint3float1[params.maxN*groups];
-  float* gathered_stacks = new float[gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size];
+  uint* nstacks = new uint[groups];
+  float* gathered_stacks = new float[gather_stacks_sum*stride];
+  float* group_weights = new float[groups*stride];
   checkCudaErrors(cudaMemcpy(stacks, d_stacks, sizeof(uint3float1)*params.maxN*groups, cudaMemcpyDeviceToHost));
-  checkCudaErrors(cudaMemcpy(gathered_stacks, d_gathered4dstack, sizeof(float)*gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaMemcpy(gathered_stacks, d_gathered4dstack, sizeof(float)*gather_stacks_sum*stride, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaMemcpy(group_weights, d_group_weights, sizeof(float)*groups*stride, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaMemcpy(nstacks, d_nstacks, sizeof(uint)*groups, cudaMemcpyDeviceToHost));
 
-  aggregation_cpu(final_image, junk_weights, size, tsize, gather_stacks_sum, stacks, gathered_stacks);
+  float* weights_vol = new float[im_size];
+  for (int i = 0; i < im_size; ++i) { weights_vol[i] = 0.0; }
+  aggregation_cpu(final_image, weights_vol, group_weights, size, tsize, gather_stacks_sum, stacks, nstacks, gathered_stacks, params.patch_size);
 
+  //float* d_denoised_volume, *d_weights_volume;
+  //checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
+  //checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
   //k_aggregation << <20, 32 >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_junk_weights, params);
   //cudaDeviceSynchronize();
   //checkCudaErrors(cudaGetLastError());
@@ -612,5 +641,6 @@ void run_aggregation(float* final_image,
   //delete[] image_vol;
   //checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
   //checkCudaErrors(cudaFree(d_junk_weights));
-  delete[] junk_weights;
+  delete[] gathered_stacks;
+  delete[] group_weights;
 }
