@@ -43,6 +43,7 @@ std::vector<uchar> BM4D::run_first_step()
 
   // Perform inverse 3D DCT
   run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  debug_kernel(d_gathered4dstack);
 
   // Aggregate
   float* final_image = new float[width*height*depth];

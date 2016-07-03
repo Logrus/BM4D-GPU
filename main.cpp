@@ -39,7 +39,7 @@ int main(int argc, char *argv[]){
   std::cout << "Volume size: (" << width << ", " << height << ", " << depth<< ") total: " << width*height*depth << std::endl;
   CImg<float> test2(noisy_image.data(), width, height, depth, 1); test2.display();
 
-  //reader.read("gt/t.txt", gt, width, height, depth);
+  reader.read("gt/t.txt", gt, width, height, depth);
 
 
   // Run first step of BM4D
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]){
   
   // Save image
   CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
-  //std::cout << "PSNR noisy: " << psnr(gt, noisy_image) << std::endl;
-  //std::cout << "PSNR denoised: " << psnr(gt, denoised_image) << std::endl;
+  std::cout << "PSNR noisy: " << psnr(gt, noisy_image) << std::endl;
+  std::cout << "PSNR denoised: " << psnr(gt, denoised_image) << std::endl;
   std::cout << "PSNR reconstructed: " << psnr(noisy_image, denoised_image) << std::endl;
 }

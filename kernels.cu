@@ -95,7 +95,7 @@ __device__ float dist(const uchar* __restrict img, const uint3 size, const uint3
           int cx = max(0, min(x + cmp.x, size.x - 1));
           int cy = max(0, min(y + cmp.y, size.y - 1));
           int cz = max(0, min(z + cmp.z, size.z - 1));
-	  printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
+	  //printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
           float tmp = (img[(rx) + (ry)*size.x + (rz)*size.x*size.y] - img[(cx) + (cy)*size.x + (cz)*size.x*size.y]);
           diff += tmp*tmp;
      }
@@ -237,7 +237,7 @@ void gather_cubes(const uchar* __restrict img,
   std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
    
   k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
-
+  cudaDeviceSynchronize();
   // Make a compaction
   uint3float1 * d_stacks_compacted;
   checkCudaErrors(cudaMalloc((void**)&d_stacks_compacted, sizeof(uint3float1)*(params.maxN*tsize.x*tsize.y*tsize.z)));
@@ -405,14 +405,14 @@ __device__ __host__ void fwht(float* data, int size)
 }
 
 __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
-  uint gather_stacks_sum,
-  int patch_size,
-  uint* d_nstacks_pow,
-  uint* accumulated_nstacks,
-  float* d_group_weights){
+                                  uint groups,
+                                  int patch_size,
+                                  uint* d_nstacks_pow,
+                                  uint* accumulated_nstacks,
+                                  float* d_group_weights){
 
-  for (int cuIdx = blockIdx.x; cuIdx < gather_stacks_sum; cuIdx += blockDim.x*gridDim.x){
-    if (cuIdx >= gather_stacks_sum) return;
+  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += blockDim.x*gridDim.x){
+    if (cuIdx >= groups) return;
 
     int x = threadIdx.x;
     int y = threadIdx.y;
@@ -430,7 +430,7 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
     }
     fwht(group_vector, size);
     //// Threshold
-    float threshold = 0 * sqrtf((float)size);
+    float threshold = 2.7 * sqrtf((float)size);
     d_group_weights[cuIdx*stride + x + y*patch_size + z*patch_size*patch_size] = 0;
     for (int i = 0; i < size; i++){
       group_vector[i] /= size; // normalize
@@ -441,12 +441,12 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
       else {
         group_vector[i] = 0;
       }
-      //// Inverse fwht
-      fwht(group_vector, size);
-      for (int i = 0; i < size; i++){
-        int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
-        d_gathered4dstack[gl_idx] = group_vector[i];
-      }
+    }
+    //// Inverse fwht
+    fwht(group_vector, size);
+    for (int i = 0; i < size; i++){
+      int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
+      d_gathered4dstack[gl_idx] = group_vector[i];
     }
   }
 }
@@ -475,7 +475,7 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   int groups = tsize.x*tsize.y*tsize.z;
   
   checkCudaErrors(cudaMalloc((void **)&d_group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
-  k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, gather_stacks_sum, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights);
+  k_run_wht_ht_iwht << <groups, dim3(4, 4, 4) >> > (d_gathered4dstack, groups, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 
@@ -484,9 +484,7 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   k_sum_group_weights << <groups, dim3(1, 1, 1) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, groups, patch_size);
   std::cout << "Weights after" << std::endl;
   debug_kernel(d_group_weights);
-  //debug_kernel_int(group_keys);
 
-  //debug_kernel(out_weights);
   checkCudaErrors(cudaFree(d_accumulated_nstacks));
 }
 
