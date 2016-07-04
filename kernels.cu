@@ -244,15 +244,15 @@ void gather_cubes(const uchar* __restrict img,
   thrust::device_ptr<uint> dt_nstacks = thrust::device_pointer_cast(d_nstacks);
   gather_stacks_sum = thrust::reduce(dt_nstacks, dt_nstacks + array_size);
   std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
-   
-  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
   cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+
   // Make a compaction
   uint3float1 * d_stacks_compacted;
   checkCudaErrors(cudaMalloc((void**)&d_stacks_compacted, sizeof(uint3float1)*(params.maxN*tsize.x*tsize.y*tsize.z)));
   thrust::device_ptr<uint3float1> dt_stacks = thrust::device_pointer_cast(d_stacks);
   thrust::device_ptr<uint3float1> dt_stacks_compacted = thrust::device_pointer_cast(d_stacks_compacted);
-
   thrust::copy_if(dt_stacks, dt_stacks + params.maxN *tsize.x*tsize.y*tsize.z, dt_stacks_compacted, is_not_empty());
   d_stacks_compacted = thrust::raw_pointer_cast(dt_stacks_compacted);
   uint3float1* tmp = d_stacks;
@@ -260,6 +260,7 @@ void gather_cubes(const uchar* __restrict img,
   checkCudaErrors(cudaFree(tmp));
   //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
   cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
 
   // Allocate memory for gathered stacks uchar
   checkCudaErrors(cudaMalloc((void**)&d_gathered4dstack, sizeof(float)*(gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size)));
@@ -514,6 +515,7 @@ void run_wht_ht_iwht(float* d_gathered4dstack,
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(d_accumulated_nstacks));
+
 }
 
 void aggregation_cpu(float* image_vol,
