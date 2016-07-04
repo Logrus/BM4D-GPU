@@ -195,7 +195,7 @@ __global__ void k_gather_cubes(const uchar* __restrict img,
                                float* d_gathered4dstack)
 {
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < array_size; i += blockDim.x*gridDim.x){
-
+    if (i >= array_size) return;
     uint3float1 ref = d_stacks[i];
     int cube_size = params.patch_size*params.patch_size*params.patch_size;
 
@@ -592,6 +592,8 @@ __global__ void k_aggregation(float* d_denoised_volume,
   int stride = params.patch_size*params.patch_size*params.patch_size;
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < groups; i += blockDim.x*gridDim.x){
 
+    if (i >= groups) return;
+
     float weight = group_weights[i*stride];
     int patches = d_nstacks[i];
     int group_beginning = d_accumulated_nstacks[i];
@@ -628,15 +630,13 @@ __global__ void k_normalizer(float* d_denoised_volume,
                              const float* __restrict d_weights_volume,
                              const uint3 size)
 {
-  for (int Idz = blockDim.z * blockIdx.z + threadIdx.z; Idz < size.z; Idz += blockDim.z*gridDim.z)
-    for (int Idy = blockDim.y * blockIdx.y + threadIdx.y; Idy < size.y; Idy += blockDim.y*gridDim.y)
-      for (int Idx = blockDim.x * blockIdx.x + threadIdx.x; Idx < size.x; Idx += blockDim.x*gridDim.x)
+  int im_size = size.x*size.y*size.z;
+  for (int i = blockDim.x * blockIdx.x + threadIdx.x; i < im_size; i += blockDim.x*gridDim.x)
       {
-        int idx = Idx + Idy*size.x + Idz*size.x*size.y;
-        if (idx >= size.x*size.y*size.z) return;
-        float tmp = d_denoised_volume[idx];
+        if (i >= im_size) return;
+        float tmp = d_denoised_volume[i];
         __syncthreads();
-        d_denoised_volume[idx] = tmp / d_weights_volume[idx];
+        d_denoised_volume[i] = tmp / d_weights_volume[i];
       }
 }
 
@@ -656,11 +656,11 @@ void run_aggregation(float* final_image,
 
 
   //int stride = params.patch_size*params.patch_size*params.patch_size;
-  //uint3float1* stacks = new uint3float1[params.maxN*groups];
+  //uint3float1* stacks = new uint3float1[gather_stacks_sum];
   //uint* nstacks = new uint[groups];
   //float* gathered_stacks = new float[gather_stacks_sum*stride];
   //float* group_weights = new float[groups*stride];
-  //checkCudaErrors(cudaMemcpy(stacks, d_stacks, sizeof(uint3float1)*params.maxN*groups, cudaMemcpyDeviceToHost));
+  //checkCudaErrors(cudaMemcpy(stacks, d_stacks, sizeof(uint3float1)*gather_stacks_sum, cudaMemcpyDeviceToHost));
   //checkCudaErrors(cudaMemcpy(gathered_stacks, d_gathered4dstack, sizeof(float)*gather_stacks_sum*stride, cudaMemcpyDeviceToHost));
   //checkCudaErrors(cudaMemcpy(group_weights, d_group_weights, sizeof(float)*groups*stride, cudaMemcpyDeviceToHost));
   //checkCudaErrors(cudaMemcpy(nstacks, d_nstacks, sizeof(uint)*groups, cudaMemcpyDeviceToHost));
@@ -687,14 +687,14 @@ void run_aggregation(float* final_image,
   checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
   checkCudaErrors(cudaMemset(d_denoised_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
   checkCudaErrors(cudaMemset(d_weights_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
-  int threads = d_prop.maxThreadsPerBlock < groups ? d_prop.maxThreadsPerBlock : groups;
+  int threads = d_prop.maxThreadsPerBlock;
   int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(groups / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(groups / threads);
   k_aggregation << <bs_x, threads >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, d_accumulated_nstacks);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
-  threads = floor(sqrt(d_prop.maxThreadsPerBlock));
+  threads = d_prop.maxThreadsPerBlock;
   bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(im_size / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(im_size / threads);
-  k_normalizer << <bs_x, dim3(threads, threads, 1) >> >(d_denoised_volume, d_weights_volume, size);
+  k_normalizer << <bs_x, threads >> >(d_denoised_volume, d_weights_volume, size);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
