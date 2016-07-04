@@ -654,6 +654,9 @@ void run_aggregation(float* final_image,
   for (int i = 0; i < im_size; ++i) { weights_vol[i] = 0.0; }
   aggregation_cpu(final_image, weights_vol, group_weights, size, tsize, gather_stacks_sum, stacks, nstacks, gathered_stacks, params.patch_size);
 
+  delete[] gathered_stacks;
+  delete[] group_weights;
+
   //float* d_denoised_volume, *d_weights_volume;
   //checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
   //checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
@@ -663,10 +666,8 @@ void run_aggregation(float* final_image,
   //k_normalizer << <20, dim3(4, 4, 1) >> >(d_denoised_volume, d_weights_volume, size);
   //cudaDeviceSynchronize();
   //checkCudaErrors(cudaGetLastError());
-
-  //delete[] image_vol;
   //checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
-  //checkCudaErrors(cudaFree(d_junk_weights));
-  delete[] gathered_stacks;
-  delete[] group_weights;
+  //checkCudaErrors(cudaFree(d_denoised_volume));
+  //checkCudaErrors(cudaFree(d_weights_volume));
+
 }
