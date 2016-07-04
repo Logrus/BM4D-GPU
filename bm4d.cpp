@@ -18,32 +18,32 @@ std::vector<uchar> BM4D::run_first_step()
 
   // Do block matching
   Stopwatch blockmatching(true);
-  run_block_matching(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks);
+  run_block_matching(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_prop);
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
 
   // Gather cubes together
   int gather_stacks_sum; 
   Stopwatch gatheringcubes(true);
-  gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack, d_nstacks_pow, gather_stacks_sum);
+  gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack, gather_stacks_sum, d_prop);
   std::cout << "Acquied size " << gather_stacks_sum << std::endl;
   gatheringcubes.stop(); std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
   // Perform 3D DCT
   Stopwatch dct_forward(true);
-  run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_prop);
   dct_forward.stop(); std::cout << "3D DCT forwars took: " << dct_forward.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   float* d_group_weights;
   Stopwatch wht_t(true);
-  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, tr_size, d_group_weights, params);
+  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks, tr_size, d_group_weights, params, d_prop);
   wht_t.stop(); std::cout << "WHT took: " << wht_t.getSeconds() << std::endl;
 
   // Perform inverse 3D DCT
   Stopwatch dct_backward(true);
-  run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size);
+  run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_prop);
   dct_backward.stop(); std::cout << "3D DCT forwars took: " << dct_backward.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
@@ -51,19 +51,9 @@ std::vector<uchar> BM4D::run_first_step()
   float* final_image = new float[width*height*depth];
   memset(final_image, 0.0, sizeof(float)*width*height*depth);
   Stopwatch aggregation_t(true);
-  run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks_pow, d_group_weights, params, gather_stacks_sum);
+  run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, gather_stacks_sum);
   aggregation_t.stop(); std::cout << "3D DCT forwars took: " << aggregation_t.getSeconds() << std::endl;
   for (int i = 0; i < size; i++){ noisy_volume[i] = static_cast<uchar>(final_image[i]); }
   delete[] final_image;
   return noisy_volume;
 }
-
-
-//void BM4D::copy_image_to_device(){
-//  checkCudaErrors(cudaMemcpy((void*)d_noisy_volume, (void*)noisy_volume.data(), sizeof(uchar)*size, cudaMemcpyHostToDevice));
-//  std::cout<<"Copied noisy_volume to d_noisy_volume "<<sizeof(uchar)*size<<" bytes"<<std::endl;
-//}
-//void BM4D::copy_image_to_host(){
-//  checkCudaErrors(cudaMemcpy((void*)noisy_volume.data(), (void*)d_noisy_volume, sizeof(uchar)*size, cudaMemcpyDeviceToHost));
-//  std::cout<<"Copied d_noisy_volume to noisy_volume "<<sizeof(uchar)*size<<" bytes "<<std::endl;
-//}
