@@ -439,7 +439,7 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
     //printf("\nSize: %d Group start: %d \n", size, group_start);
 
     for (int i = 0; i < size; i++){
-      int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
+      long long int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
       group_vector[i] = d_gathered4dstack[gl_idx];
     }
     
@@ -460,13 +460,13 @@ __global__ void k_run_wht_ht_iwht(float* d_gathered4dstack,
     //// Inverse fwht
     fwht(group_vector, size);
     for (int i = 0; i < size; i++){
-      int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
+      long long int gl_idx = (group_start*stride) + (x + y*patch_size + z*patch_size*patch_size + i*stride);
       d_gathered4dstack[gl_idx] = group_vector[i];
     }
   }
 }
 __global__ void k_sum_group_weights(float* d_group_weights, uint* d_accumulated_nstacks, uint* d_nstacks, uint groups, int patch_size){
-  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += blockDim.x*gridDim.x){
+  for (int cuIdx = blockIdx.x; cuIdx < groups; cuIdx += gridDim.x){
     if (cuIdx >= groups) return;
     int stride = patch_size*patch_size*patch_size;
     float counter = 0;
@@ -616,7 +616,7 @@ __global__ void k_aggregation(float* d_denoised_volume,
             if (rz < 0 || rz >= size.z) continue;
 
             int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
-            int stack_idx = group_beginning*stride + (x)+(y + z*params.patch_size)*params.patch_size + p*stride;
+            long long int stack_idx = group_beginning*stride + (x)+(y + z*params.patch_size)*params.patch_size + p*stride;
             float tmp = d_gathered4dstack[stack_idx];
             __syncthreads();
             atomicAdd(&d_denoised_volume[img_idx], tmp*weight);
