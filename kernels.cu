@@ -480,6 +480,15 @@ __global__ void k_sum_group_weights(float* d_group_weights, uint* d_accumulated_
   }
 }
 
+struct is_computed_weight
+{
+  __host__ __device__
+    bool operator()(const float x)
+  {
+    return (x < 1.0);
+  }
+};
+
 void run_wht_ht_iwht(float* d_gathered4dstack, 
                      uint gather_stacks_sum, 
                      int patch_size, 
@@ -500,7 +509,6 @@ void run_wht_ht_iwht(float* d_gathered4dstack,
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 
-  
   checkCudaErrors(cudaMalloc((void **)&d_group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
   checkCudaErrors(cudaMemset(d_group_weights, 0.0, sizeof(float)*groups*patch_size*patch_size*patch_size));
   int threads = params.patch_size*params.patch_size*params.patch_size;
@@ -515,7 +523,6 @@ void run_wht_ht_iwht(float* d_gathered4dstack,
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaFree(d_accumulated_nstacks));
-
 }
 
 void aggregation_cpu(float* image_vol,
@@ -572,43 +579,48 @@ void aggregation_cpu(float* image_vol,
 
 __global__ void k_aggregation(float* d_denoised_volume, 
                               float* d_weights_volume,
-                            const uint3 size,
-                            const uint3 tsize,
-                            float* d_gathered4dstack, 
-                            uint3float1* d_stacks, 
-                            uint* d_nstacks, 
-                            float* group_weights, 
-                            const Parameters params){
+                              const uint3 size,
+                              const uint3 tsize,
+                              const float* d_gathered4dstack, 
+                              uint3float1* d_stacks, 
+                              uint* d_nstacks, 
+                              float* group_weights, 
+                              const Parameters params,
+                              const uint* d_accumulated_nstacks){
 
-  uint array_size = (tsize.x*tsize.y*tsize.z);
-  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < array_size; i += blockDim.x*gridDim.x){
+  uint groups = (tsize.x*tsize.y*tsize.z);
+  int stride = params.patch_size*params.patch_size*params.patch_size;
+  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < groups; i += blockDim.x*gridDim.x){
 
-    uint3float1 ref = d_stacks[i];
-    //printf("ref: %d %d %d\n", ref.x, ref.y, ref.z);
-    //float weight = 1.0;//group_weights[i];
-    int cube_size = params.patch_size*params.patch_size*params.patch_size;
-    for (int z = 0; z < params.patch_size; ++z)
-      for (int y = 0; y < params.patch_size; ++y)
-        for (int x = 0; x < params.patch_size; ++x){
-          int rx = x + ref.x;
-          int ry = y + ref.y;
-          int rz = z + ref.z;
+    float weight = group_weights[i*stride];
+    int patches = d_nstacks[i];
+    int group_beginning = d_accumulated_nstacks[i];
+    //printf("Weight for the group %d is %f\n", i, weight);
+    //printf("Num of patches %d\n", patches);
+    //printf("Group beginning %d\n", group_beginning);
+    //if (i > 15) return;
+    for (int p = 0; p < patches; ++p){
+      uint3float1 ref = d_stacks[group_beginning + p];
 
-          if (rx < 0 || rx >= size.x) continue;
-          if (ry < 0 || ry >= size.y) continue;
-          if (rz < 0 || rz >= size.z) continue;
+      for (int z = 0; z < params.patch_size; ++z)
+        for (int y = 0; y < params.patch_size; ++y)
+          for (int x = 0; x < params.patch_size; ++x){
+            int rx = x + ref.x;
+            int ry = y + ref.y;
+            int rz = z + ref.z;
 
-          int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
-          int stack_idx = i*cube_size + (x)+(y + z*params.patch_size)*params.patch_size;
-          float tmp = d_gathered4dstack[stack_idx];
-          __syncthreads();
-          //d_denoised_volume[img_idx] = tmp;
-          atomicAdd(&d_denoised_volume[img_idx], tmp);
-          atomicAdd(&d_weights_volume[img_idx], 1.0);
-          //d_weights_volume[img_idx] = 1.0;
-          //atomicAdd(d_denoised_volume + img_idx, d_gathered4dstack[stack_idx]);
-          //atomicAdd(d_weights_volume + img_idx, weight);
-        }
+            if (rx < 0 || rx >= size.x) continue;
+            if (ry < 0 || ry >= size.y) continue;
+            if (rz < 0 || rz >= size.z) continue;
+
+            int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
+            int stack_idx = group_beginning*stride + (x)+(y + z*params.patch_size)*params.patch_size + p*stride;
+            float tmp = d_gathered4dstack[stack_idx];
+            __syncthreads();
+            atomicAdd(&d_denoised_volume[img_idx], tmp*weight);
+            atomicAdd(&d_weights_volume[img_idx], weight);
+          }
+    }
   }
 }
 
@@ -620,7 +632,8 @@ __global__ void k_normalizer(float* d_denoised_volume,
     for (int Idy = blockDim.y * blockIdx.y + threadIdx.y; Idy < size.y; Idy += blockDim.y*gridDim.y)
       for (int Idx = blockDim.x * blockIdx.x + threadIdx.x; Idx < size.x; Idx += blockDim.x*gridDim.x)
       {
-        int idx = Idx + Idy*size.x + Idx*size.x*size.y;
+        int idx = Idx + Idy*size.x + Idz*size.x*size.y;
+        if (idx >= size.x*size.y*size.z) return;
         float tmp = d_denoised_volume[idx];
         __syncthreads();
         d_denoised_volume[idx] = tmp / d_weights_volume[idx];
@@ -635,41 +648,58 @@ void run_aggregation(float* final_image,
                      uint* d_nstacks, 
                      float* d_group_weights,
                      const Parameters params,
-                     int gather_stacks_sum)
+                     int gather_stacks_sum,
+                     const cudaDeviceProp &d_prop)
 {
   int im_size = size.x*size.y*size.z;
   int groups = tsize.x*tsize.y*tsize.z;
-  int stride = params.patch_size*params.patch_size*params.patch_size;
 
 
+  //int stride = params.patch_size*params.patch_size*params.patch_size;
+  //uint3float1* stacks = new uint3float1[params.maxN*groups];
+  //uint* nstacks = new uint[groups];
+  //float* gathered_stacks = new float[gather_stacks_sum*stride];
+  //float* group_weights = new float[groups*stride];
+  //checkCudaErrors(cudaMemcpy(stacks, d_stacks, sizeof(uint3float1)*params.maxN*groups, cudaMemcpyDeviceToHost));
+  //checkCudaErrors(cudaMemcpy(gathered_stacks, d_gathered4dstack, sizeof(float)*gather_stacks_sum*stride, cudaMemcpyDeviceToHost));
+  //checkCudaErrors(cudaMemcpy(group_weights, d_group_weights, sizeof(float)*groups*stride, cudaMemcpyDeviceToHost));
+  //checkCudaErrors(cudaMemcpy(nstacks, d_nstacks, sizeof(uint)*groups, cudaMemcpyDeviceToHost));
 
-  uint3float1* stacks = new uint3float1[params.maxN*groups];
-  uint* nstacks = new uint[groups];
-  float* gathered_stacks = new float[gather_stacks_sum*stride];
-  float* group_weights = new float[groups*stride];
-  checkCudaErrors(cudaMemcpy(stacks, d_stacks, sizeof(uint3float1)*params.maxN*groups, cudaMemcpyDeviceToHost));
-  checkCudaErrors(cudaMemcpy(gathered_stacks, d_gathered4dstack, sizeof(float)*gather_stacks_sum*stride, cudaMemcpyDeviceToHost));
-  checkCudaErrors(cudaMemcpy(group_weights, d_group_weights, sizeof(float)*groups*stride, cudaMemcpyDeviceToHost));
-  checkCudaErrors(cudaMemcpy(nstacks, d_nstacks, sizeof(uint)*groups, cudaMemcpyDeviceToHost));
+  //float* weights_vol = new float[im_size];
+  //for (int i = 0; i < im_size; ++i) { weights_vol[i] = 0.0; }
+  //aggregation_cpu(final_image, weights_vol, group_weights, size, tsize, gather_stacks_sum, stacks, nstacks, gathered_stacks, params.patch_size);
 
-  float* weights_vol = new float[im_size];
-  for (int i = 0; i < im_size; ++i) { weights_vol[i] = 0.0; }
-  aggregation_cpu(final_image, weights_vol, group_weights, size, tsize, gather_stacks_sum, stacks, nstacks, gathered_stacks, params.patch_size);
+  //delete[] gathered_stacks;
+  //delete[] group_weights;
 
-  delete[] gathered_stacks;
-  delete[] group_weights;
+  // Accumulate nstacks through sum
+  uint* d_accumulated_nstacks;
+  checkCudaErrors(cudaMalloc((void **)&d_accumulated_nstacks, sizeof(uint)*groups));
+  thrust::device_ptr<uint> dt_accumulated_nstacks = thrust::device_pointer_cast(d_accumulated_nstacks);
+  thrust::device_ptr<uint> dt_nstacks = thrust::device_pointer_cast(d_nstacks);
+  thrust::exclusive_scan(dt_nstacks, dt_nstacks + groups, dt_accumulated_nstacks);
+  d_accumulated_nstacks = thrust::raw_pointer_cast(dt_accumulated_nstacks);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
 
-  //float* d_denoised_volume, *d_weights_volume;
-  //checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
-  //checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
-  //k_aggregation << <20, 32 >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_junk_weights, params);
-  //cudaDeviceSynchronize();
-  //checkCudaErrors(cudaGetLastError());
-  //k_normalizer << <20, dim3(4, 4, 1) >> >(d_denoised_volume, d_weights_volume, size);
-  //cudaDeviceSynchronize();
-  //checkCudaErrors(cudaGetLastError());
-  //checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
-  //checkCudaErrors(cudaFree(d_denoised_volume));
-  //checkCudaErrors(cudaFree(d_weights_volume));
+  float* d_denoised_volume, *d_weights_volume;
+  checkCudaErrors(cudaMalloc((void **)&d_denoised_volume, sizeof(float)*size.x*size.y*size.z));
+  checkCudaErrors(cudaMalloc((void **)&d_weights_volume, sizeof(float)*size.x*size.y*size.z));
+  checkCudaErrors(cudaMemset(d_denoised_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
+  checkCudaErrors(cudaMemset(d_weights_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
+  int threads = d_prop.maxThreadsPerBlock < groups ? d_prop.maxThreadsPerBlock : groups;
+  int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(groups / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(groups / threads);
+  k_aggregation << <bs_x, threads >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, d_accumulated_nstacks);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+  threads = floor(sqrt(d_prop.maxThreadsPerBlock));
+  bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(im_size / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(im_size / threads);
+  k_normalizer << <bs_x, dim3(threads, threads, 1) >> >(d_denoised_volume, d_weights_volume, size);
+  cudaDeviceSynchronize();
+  checkCudaErrors(cudaGetLastError());
+  checkCudaErrors(cudaMemcpy(final_image, d_denoised_volume, sizeof(float)*im_size, cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaFree(d_denoised_volume));
+  checkCudaErrors(cudaFree(d_weights_volume));
+  checkCudaErrors(cudaFree(d_accumulated_nstacks));
 
 }
