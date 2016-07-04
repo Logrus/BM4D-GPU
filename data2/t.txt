@@ -1,4 +1,4 @@
-50
+15
 gstennisg15_0000.pgm
 gstennisg15_0001.pgm
 gstennisg15_0002.pgm

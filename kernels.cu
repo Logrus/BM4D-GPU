@@ -154,7 +154,7 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
                         uint3float1 *d_stacks,
                         uint *d_nstacks)
 {
-  dim3 block(16, 16, 1);
+  dim3 block(32, 32, 1);
   //dim3 grid(size.x / block.x / params.step_size, size.y / block.y / params.step_size, 1);
   dim3 grid(1024, 1024, 1);
 
@@ -479,13 +479,13 @@ void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch
   std::cout << "Groups " << groups << std::endl;
   checkCudaErrors(cudaMalloc((void **)&d_group_weights, sizeof(float)*groups*patch_size*patch_size*patch_size)); // Cubes with weights for each group
   checkCudaErrors(cudaMemset(d_group_weights, 0.0, sizeof(float)*groups*patch_size*patch_size*patch_size));
-  k_run_wht_ht_iwht << <1, dim3(4, 4, 4) >> > (d_gathered4dstack, groups, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights, params.hard_th);
+  k_run_wht_ht_iwht << <1024, dim3(4, 4, 4) >> > (d_gathered4dstack, groups, patch_size, d_nstacks_pow, d_accumulated_nstacks, d_group_weights, params.hard_th);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
 
   //std::cout << "Weights before"<<std::endl;
   //debug_kernel(d_group_weights);
-  k_sum_group_weights << <1, dim3(1, 1, 1) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, groups, patch_size);
+  k_sum_group_weights << <1024, dim3(1, 1, 1) >> >(d_group_weights, d_accumulated_nstacks, d_nstacks_pow, groups, patch_size);
   //std::cout << "Weights after" << std::endl;
   //debug_kernel(d_group_weights);
 
