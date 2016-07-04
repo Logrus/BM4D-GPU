@@ -5,8 +5,6 @@ std::vector<uchar> BM4D::run_first_step()
 
   Stopwatch copyingtodevice(true);
   uchar* d_noisy_volume;
-  std::cout << size << std::endl;
-  std::cout << noisy_volume.size() << std::endl;
   assert(size == noisy_volume.size());
   checkCudaErrors(cudaMalloc((void**)&d_noisy_volume, sizeof(uchar)*size));
   checkCudaErrors(cudaMemcpy((void*)d_noisy_volume, (void*)noisy_volume.data(), sizeof(uchar)*size, cudaMemcpyHostToDevice));
@@ -40,7 +38,7 @@ std::vector<uchar> BM4D::run_first_step()
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   float* d_group_weights;
   Stopwatch wht_t(true);
-  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, tr_size, d_group_weights);
+  run_wht_ht_iwht(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_nstacks_pow, tr_size, d_group_weights, params);
   wht_t.stop(); std::cout << "WHT took: " << wht_t.getSeconds() << std::endl;
 
   // Perform inverse 3D DCT

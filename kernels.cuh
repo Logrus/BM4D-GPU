@@ -52,7 +52,8 @@ void gather_cubes(const uchar* __restrict img,
 // Perform 3D DCT
 void run_dct3d(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size);
 // Do WHT in 4th dim + Hard Thresholding + IWHT
-void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size, uint* d_nstacks_pow, const uint3 tsize, float* &d_group_weights);
+void run_wht_ht_iwht(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size, uint* d_nstacks_pow, const uint3 tsize, float* &d_group_weights,
+const Parameters params);
 // Perform inverse 3D DCT
 void run_idct3d(float* d_gathered4dstack, uint gather_stacks_sum, int patch_size);
 // Aggregate
