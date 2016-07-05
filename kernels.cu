@@ -9,7 +9,7 @@
 
 __global__ void k_debug_lookup_stacks(uint3float1 * d_stacks, int total_elements){
   int a = 345;
-  for (int i = 0; i < 15; ++i){
+  for (int i = 0; i < 150; ++i){
     a += i;
     printf("%i: %d %d %d %f\n", i, d_stacks[i].x, d_stacks[i].y, d_stacks[i].z, d_stacks[i].val);
   }
@@ -176,13 +176,21 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
  
 }
 
-__global__ void k_nstack_to_pow(uint* d_nstacks, const int size){
-  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x){
-    if (i >= size) return;
+__global__ void k_nstack_to_pow(uint3float1* d_stacks, uint* d_nstacks, const int elements, const uint maxN){
+  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < elements; i += blockDim.x*gridDim.x){
+    if (i >= elements) return;
 
-    uint tmp = flp2(d_nstacks[i]);
+    uint inGroupId = i % maxN;
+    uint groupId = i/maxN;
+
+    uint tmp = flp2(d_nstacks[groupId]);
+    uint diff = d_nstacks[groupId] - tmp;
+
     __syncthreads();
-    d_nstacks[i] = tmp;
+    d_nstacks[groupId] = tmp;
+
+    if( inGroupId < diff )
+      d_stacks[i].val = -1;
       
   }
 }
@@ -238,15 +246,15 @@ void gather_cubes(const uchar* __restrict img,
   // Convert all the numbers in d_nstacks to the lowest power of two
   uint array_size = (tsize.x*tsize.y*tsize.z);
   int threads = d_prop.maxThreadsPerBlock;
-  int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(array_size / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(array_size / threads);
-  k_nstack_to_pow << <bs_x, threads >> >(d_nstacks, array_size);
+  int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(params.maxN*array_size / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(params.maxN*array_size / threads);
+  k_nstack_to_pow << <bs_x, threads >> >(d_stacks, d_nstacks, params.maxN*array_size, params.maxN);
   checkCudaErrors(cudaGetLastError());
   thrust::device_ptr<uint> dt_nstacks = thrust::device_pointer_cast(d_nstacks);
   gather_stacks_sum = thrust::reduce(dt_nstacks, dt_nstacks + array_size);
-  std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
+  //std::cout << "Sum of pathces: "<< gather_stacks_sum << std::endl;
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
-  //k_debug_lookup_stacks << <1, 1 >> >(d_stacks, tsize.x*tsize.y*tsize.z);
+  
 
   // Make a compaction
   uint3float1 * d_stacks_compacted;
@@ -264,7 +272,7 @@ void gather_cubes(const uchar* __restrict img,
 
   // Allocate memory for gathered stacks uchar
   checkCudaErrors(cudaMalloc((void**)&d_gathered4dstack, sizeof(float)*(gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size)));
-  std::cout << "Allocated " << sizeof(float)*(gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size) << " bytes for gathered4dstack" << std::endl;
+  //std::cout << "Allocated " << sizeof(float)*(gather_stacks_sum*params.patch_size*params.patch_size*params.patch_size) << " bytes for gathered4dstack" << std::endl;
 
   bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(gather_stacks_sum / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(gather_stacks_sum / threads);
   k_gather_cubes << < bs_x, threads >> > (img, size, params, d_stacks, gather_stacks_sum, d_gathered4dstack);
