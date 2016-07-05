@@ -25,7 +25,7 @@ std::vector<uchar> BM4D::run_first_step()
   int gather_stacks_sum; 
   Stopwatch gatheringcubes(true);
   gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack, gather_stacks_sum, d_prop);
-  std::cout << "Acquied size " << gather_stacks_sum << std::endl;
+  //std::cout << "Acquied size " << gather_stacks_sum << std::endl;
   gatheringcubes.stop(); std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
   checkCudaErrors(cudaFree(d_noisy_volume));
@@ -45,7 +45,7 @@ std::vector<uchar> BM4D::run_first_step()
   // Perform inverse 3D DCT
   Stopwatch dct_backward(true);
   run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_prop);
-  dct_backward.stop(); std::cout << "3D DCT forwars took: " << dct_backward.getSeconds() << std::endl;
+  dct_backward.stop(); std::cout << "3D DCT backwards took: " << dct_backward.getSeconds() << std::endl;
   //debug_kernel(d_gathered4dstack);
 
   // Aggregate
@@ -53,7 +53,7 @@ std::vector<uchar> BM4D::run_first_step()
   memset(final_image, 0.0, sizeof(float)*width*height*depth);
   Stopwatch aggregation_t(true);
   run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, gather_stacks_sum, d_prop);
-  aggregation_t.stop(); std::cout << "3D DCT forwars took: " << aggregation_t.getSeconds() << std::endl;
+  aggregation_t.stop(); std::cout << "Aggregation took: " << aggregation_t.getSeconds() << std::endl;
   for (int i = 0; i < size; i++){ noisy_volume[i] = static_cast<uchar>(final_image[i]); }
   delete[] final_image;
   return noisy_volume;
