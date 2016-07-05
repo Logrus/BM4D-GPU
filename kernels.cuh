@@ -44,7 +44,7 @@ void gather_cubes(const uchar* __restrict img,
                   uint3float1* &d_stacks,
                   uint* d_nstacks,
                   float* &d_gathered4dstack,
-                  int &gather_stacks_sum,
+                  uint &gather_stacks_sum,
                   const cudaDeviceProp &d_prop);
 // Perform 3D DCT
 void run_dct3d(float* d_gathered4dstack, 

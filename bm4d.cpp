@@ -22,7 +22,7 @@ std::vector<uchar> BM4D::run_first_step()
   blockmatching.stop(); std::cout<<"Blockmatching took: "<<blockmatching.getSeconds()<<std::endl;
  
   // Gather cubes together
-  int gather_stacks_sum; 
+  uint gather_stacks_sum; 
   Stopwatch gatheringcubes(true);
   gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack, gather_stacks_sum, d_prop);
   //std::cout << "Acquied size " << gather_stacks_sum << std::endl;

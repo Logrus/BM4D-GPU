@@ -240,7 +240,7 @@ void gather_cubes(const uchar* __restrict img,
                   uint3float1* &d_stacks,
                   uint* d_nstacks,
                   float* &d_gathered4dstack,
-                  int &gather_stacks_sum,
+                  uint &gather_stacks_sum,
                   const cudaDeviceProp &d_prop)
 {
   // Convert all the numbers in d_nstacks to the lowest power of two

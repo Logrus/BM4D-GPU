@@ -14,7 +14,6 @@ class BM4D {
 private:
   // Main variables
   std::vector<uchar> noisy_volume;
-  std::vector<uchar> base_volume;
 
   // Device variables
   float* d_gathered4dstack;
@@ -23,7 +22,6 @@ private:
   float* d_group_weights;
   int width, height, depth, size;
   int twidth, theight, tdepth, tsize;
-  uint gather_stack_sum;
 
   // Parameters for launching kernels
   dim3 block;
