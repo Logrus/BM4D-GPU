@@ -57,7 +57,8 @@ public:
     checkCudaErrors(cudaMemcpy(d_stacks, tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
     delete[] tmp_arr;
 
-    checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint3float1)*(tsize)));
+    checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint)*(tsize)));
+    checkCudaErrors(cudaMemset(d_nstacks, 0, sizeof(uint)*tsize));
     std::cout << "Allocated " << (tsize) << " elements for d_nstacks" << std::endl;
 
   };
