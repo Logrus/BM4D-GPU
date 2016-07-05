@@ -1,11 +1,15 @@
+#define cimg_use_tiff
+#pragma comment( lib, "libtiff.lib" )
+#pragma comment( lib, "libtiff-bcc.lib" )
 #include <string>
 #include <iostream>
 #include "allreader.h"
 #include "bm4d.h"
 #include "parameters.h"
-#include "CImg.h"
 #include "stopwatch.hpp"
+#include "CImg.h"
 using namespace cimg_library;
+
 
 float psnr(std::vector<unsigned char>& gt, std::vector<unsigned char>& noisy)
 {
@@ -37,9 +41,9 @@ int main(int argc, char *argv[]){
   reader.read(p.filename, noisy_image, width, height, depth);
   loading_file.stop(); std::cout<<"Loading file took: "<<loading_file.getSeconds()<<std::endl;
   std::cout << "Volume size: (" << width << ", " << height << ", " << depth<< ") total: " << width*height*depth << std::endl;
-  //CImg<float> test2(noisy_image.data(), width, height, depth, 1); test2.display();
-
-  reader.read("gt/t.txt", gt, width, height, depth);
+  CImg<unsigned char> test2(noisy_image.data(), width, height, depth, 1); test2.display();
+  test2.save_tiff("noisy.tiff");
+  //reader.read("gt/t.txt", gt, width, height, depth);
 
 
   // Run first step of BM4D
@@ -50,6 +54,7 @@ int main(int argc, char *argv[]){
   
   // Save image
   CImg<unsigned char> test(denoised_image.data(), width, height, depth, 1, 1); test.display();
+  test.save_tiff("denoised.tiff");
   std::cout << "PSNR noisy: " << psnr(gt, noisy_image) << std::endl;
   std::cout << "PSNR denoised: " << psnr(gt, denoised_image) << std::endl;
   std::cout << "PSNR reconstructed: " << psnr(noisy_image, denoised_image) << std::endl;
