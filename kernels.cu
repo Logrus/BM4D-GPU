@@ -178,11 +178,11 @@ void run_block_matching(const uchar* __restrict d_noisy_volume,
 
 __global__ void k_nstack_to_pow(uint* d_nstacks, const int size){
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < size; i += blockDim.x*gridDim.x){
-    if (i < size){
-      uint tmp = flp2(d_nstacks[i]);
-      __syncthreads();
-      d_nstacks[i] = tmp;
-    }
+    if (i >= size) return;
+
+    uint tmp = flp2(d_nstacks[i]);
+    __syncthreads();
+    d_nstacks[i] = tmp;
       
   }
 }
@@ -219,7 +219,7 @@ __global__ void k_gather_cubes(const uchar* __restrict img,
 struct is_not_empty
 {
   __host__ __device__
-    bool operator()(const uint3float1 x)
+  bool operator()(const uint3float1 x)
   {
     return (x.val != -1);
   }
@@ -250,7 +250,7 @@ void gather_cubes(const uchar* __restrict img,
 
   // Make a compaction
   uint3float1 * d_stacks_compacted;
-  checkCudaErrors(cudaMalloc((void**)&d_stacks_compacted, sizeof(uint3float1)*(params.maxN*tsize.x*tsize.y*tsize.z)));
+  checkCudaErrors(cudaMalloc((void**)&d_stacks_compacted, sizeof(uint3float1)*gather_stacks_sum));
   thrust::device_ptr<uint3float1> dt_stacks = thrust::device_pointer_cast(d_stacks);
   thrust::device_ptr<uint3float1> dt_stacks_compacted = thrust::device_pointer_cast(d_stacks_compacted);
   thrust::copy_if(dt_stacks, dt_stacks + params.maxN *tsize.x*tsize.y*tsize.z, dt_stacks_compacted, is_not_empty());
