@@ -51,13 +51,13 @@ public:
 
     uint3float1* tmp_arr = new uint3float1[params.maxN*tsize];
     checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN *tsize)));
-    std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << " bytes for d_stacks" << std::endl;
+    //std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << " bytes for d_stacks" << std::endl;
     checkCudaErrors(cudaMemcpy(d_stacks, tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
     delete[] tmp_arr;
 
     checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint)*(tsize)));
     checkCudaErrors(cudaMemset(d_nstacks, 0, sizeof(uint)*tsize));
-    std::cout << "Allocated " << (tsize) << " elements for d_nstacks" << std::endl;
+    //std::cout << "Allocated " << (tsize) << " elements for d_nstacks" << std::endl;
 
   };
 
@@ -65,15 +65,15 @@ public:
     // Cleanup
     if (d_stacks){
       checkCudaErrors(cudaFree(d_stacks));
-      std::cout << "Cleaned up d_stacks" << std::endl;
+      //std::cout << "Cleaned up d_stacks" << std::endl;
     }
     if (d_nstacks){
       checkCudaErrors(cudaFree(d_nstacks));
-      std::cout << "Cleaned up d_nstacks" << std::endl;
+      //std::cout << "Cleaned up d_nstacks" << std::endl;
     }
     if (d_gathered4dstack){
       checkCudaErrors(cudaFree(d_gathered4dstack));
-      std::cout << "Cleaned up bytes of d_gathered4dstack" << std::endl;
+      //std::cout << "Cleaned up bytes of d_gathered4dstack" << std::endl;
     }
     cudaDeviceReset();
   };
