@@ -202,10 +202,10 @@ __global__ void k_gather_cubes(const uchar* __restrict img,
                                const uint array_size,
                                float* d_gathered4dstack)
 {
+  int cube_size = params.patch_size*params.patch_size*params.patch_size;
   for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < array_size; i += blockDim.x*gridDim.x){
     if (i >= array_size) return;
     uint3float1 ref = d_stacks[i];
-    int cube_size = params.patch_size*params.patch_size*params.patch_size;
 
     for (int z = 0; z < params.patch_size; ++z)
       for (int y = 0; y < params.patch_size; ++y)
