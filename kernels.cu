@@ -183,13 +183,14 @@ __global__ void k_nstack_to_pow(uint3float1* d_stacks, uint* d_nstacks, const in
     uint inGroupId = i % maxN;
     uint groupId = i/maxN;
 
-    uint tmp = flp2(d_nstacks[groupId]);
+    uint n = d_nstacks[groupId];
+    uint tmp = flp2(n);
     uint diff = d_nstacks[groupId] - tmp;
 
     __syncthreads();
     d_nstacks[groupId] = tmp;
 
-    if( inGroupId < diff )
+    if (inGroupId < diff || inGroupId >= n)
       d_stacks[i].val = -1;
       
   }

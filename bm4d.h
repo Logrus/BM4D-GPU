@@ -49,11 +49,11 @@ public:
     tdepth  = std::floor((depth - 1)  / params.step_size + 1);
     tsize   = twidth * theight * tdepth;
 
-    uint3float1* tmp_arr = new uint3float1[params.maxN*tsize];
+    //uint3float1* tmp_arr = new uint3float1[params.maxN*tsize];
     checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1)*(params.maxN *tsize)));
     //std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << " bytes for d_stacks" << std::endl;
-    checkCudaErrors(cudaMemcpy(d_stacks, tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
-    delete[] tmp_arr;
+    //checkCudaErrors(cudaMemcpy(d_stacks, tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
+    //delete[] tmp_arr;
 
     checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint)*(tsize)));
     checkCudaErrors(cudaMemset(d_nstacks, 0, sizeof(uint)*tsize));
