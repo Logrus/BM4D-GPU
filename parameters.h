@@ -6,7 +6,7 @@
 struct Parameters{
   // Modifyable
   std::string filename = "gflowersg15/t.txt";
-  std::string out_filename = "";
+  std::string out_filename = "denoised.tiff";
   float sim_th = 2500.0;   // Similarity threshold for the first step
   float hard_th = 2.7; // Hard schrinkage threshold
 
