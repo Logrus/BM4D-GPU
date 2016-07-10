@@ -74,6 +74,6 @@ void run_aggregation(float* final_image,
                      uint* d_nstacks,
                      float* group_weights,
                      const Parameters params,
-                     int gather_stacks_sum,
+                     uint gather_stacks_sum,
                      const cudaDeviceProp &d_prop);
 void debug_kernel(float* tmp);

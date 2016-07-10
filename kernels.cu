@@ -586,6 +586,33 @@ void aggregation_cpu(float* image_vol,
 
 }
 
+__device__ int get_id(const uint idx, const uint* d_arr, const uint first, const uint last){
+  int i;
+
+  if (idx == 0) return 0;
+
+  if (first > last){
+    i = -1;
+  } else {
+
+    int mid = (first + last) / 2;
+
+    if (idx == d_arr[mid])
+      i = mid;
+    else
+
+      if (idx < d_arr[mid])
+        i = get_id(idx, d_arr, first, mid - 1);
+      else
+        i = get_id(idx, d_arr, mid + 1, last);
+    
+    if (i == -1) return mid - 1;
+
+  } // end if
+  return i;
+
+}
+
 __global__ void k_aggregation(float* d_denoised_volume, 
                               float* d_weights_volume,
                               const uint3 size,
@@ -595,43 +622,42 @@ __global__ void k_aggregation(float* d_denoised_volume,
                               uint* d_nstacks, 
                               float* group_weights, 
                               const Parameters params,
-                              const uint* d_accumulated_nstacks){
+                              const uint* d_accumulated_nstacks,
+                              uint gather_stacks_sum){
 
-  uint groups = (tsize.x*tsize.y*tsize.z);
+  uint groups = tsize.x*tsize.y*tsize.z;
   int stride = params.patch_size*params.patch_size*params.patch_size;
-  for (int i = blockIdx.x*blockDim.x + threadIdx.x; i < groups; i += blockDim.x*gridDim.x){
+  for (uint i = blockIdx.x*blockDim.x + threadIdx.x; i < gather_stacks_sum; i += blockDim.x*gridDim.x){
+    if (i >= gather_stacks_sum) return;
 
-    if (i >= groups) return;
+    //uint inGroupId = i % params.maxN;
+    //uint groupId = i / params.maxN; 
+    uint groupId = get_id(i, d_accumulated_nstacks, 0, groups);
 
-    float weight = group_weights[i*stride];
-    int patches = d_nstacks[i];
-    int group_beginning = d_accumulated_nstacks[i];
-    //printf("Weight for the group %d is %f\n", i, weight);
-    //printf("Num of patches %d\n", patches);
-    //printf("Group beginning %d\n", group_beginning);
-    //if (i > 15) return;
-    for (int p = 0; p < patches; ++p){
-      uint3float1 ref = d_stacks[group_beginning + p];
 
-      for (int z = 0; z < params.patch_size; ++z)
-        for (int y = 0; y < params.patch_size; ++y)
-          for (int x = 0; x < params.patch_size; ++x){
-            int rx = x + ref.x;
-            int ry = y + ref.y;
-            int rz = z + ref.z;
+    float weight = group_weights[groupId*stride];
 
-            if (rx < 0 || rx >= size.x) continue;
-            if (ry < 0 || ry >= size.y) continue;
-            if (rz < 0 || rz >= size.z) continue;
+    uint3float1 ref = d_stacks[i];
 
-            int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
-            long long int stack_idx = group_beginning*stride + (x)+(y + z*params.patch_size)*params.patch_size + p*stride;
-            float tmp = d_gathered4dstack[stack_idx];
-            __syncthreads();
-            atomicAdd(&d_denoised_volume[img_idx], tmp*weight);
-            atomicAdd(&d_weights_volume[img_idx], weight);
-          }
-    }
+    for (int z = 0; z < params.patch_size; ++z)
+      for (int y = 0; y < params.patch_size; ++y)
+        for (int x = 0; x < params.patch_size; ++x){
+          int rx = x + ref.x;
+          int ry = y + ref.y;
+          int rz = z + ref.z;
+
+          if (rx < 0 || rx >= size.x) continue;
+          if (ry < 0 || ry >= size.y) continue;
+          if (rz < 0 || rz >= size.z) continue;
+
+          int img_idx = (rx)+(ry)*size.x + (rz)*size.x*size.y;
+          long long int stack_idx =  (x)+(y + z*params.patch_size)*params.patch_size + i*stride;
+          float tmp = d_gathered4dstack[stack_idx];
+          __syncthreads();
+          atomicAdd(&d_denoised_volume[img_idx], tmp*weight);
+          atomicAdd(&d_weights_volume[img_idx], weight);
+        }
+
   }
 }
 
@@ -657,7 +683,7 @@ void run_aggregation(float* final_image,
                      uint* d_nstacks, 
                      float* d_group_weights,
                      const Parameters params,
-                     int gather_stacks_sum,
+                     uint gather_stacks_sum,
                      const cudaDeviceProp &d_prop)
 {
   int im_size = size.x*size.y*size.z;
@@ -697,8 +723,8 @@ void run_aggregation(float* final_image,
   checkCudaErrors(cudaMemset(d_denoised_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
   checkCudaErrors(cudaMemset(d_weights_volume, 0.0, sizeof(float)*size.x*size.y*size.z));
   int threads = d_prop.maxThreadsPerBlock;
-  int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(groups / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(groups / threads);
-  k_aggregation << <bs_x, threads >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, d_accumulated_nstacks);
+  int bs_x = std::ceil(d_prop.maxGridSize[1] / threads) < std::ceil(gather_stacks_sum / threads) ? std::ceil(d_prop.maxGridSize[1] / threads) : std::ceil(gather_stacks_sum / threads);
+  k_aggregation << <bs_x, threads >> >(d_denoised_volume, d_weights_volume, size, tsize, d_gathered4dstack, d_stacks, d_nstacks, d_group_weights, params, d_accumulated_nstacks, gather_stacks_sum);
   cudaDeviceSynchronize();
   checkCudaErrors(cudaGetLastError());
   threads = d_prop.maxThreadsPerBlock;
