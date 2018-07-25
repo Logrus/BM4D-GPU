@@ -1,41 +1,52 @@
 /*
-* 2016, Vladislav Tananaev
-* v.d.tananaev [at] gmail [dot] com
-*/
+ * 2016, Vladislav Tananaev
+ * v.d.tananaev [at] gmail [dot] com
+ */
 #pragma once
 #include <cstdlib> // EXIT_SUCESS, EXIT_FAILURE
-#include <string>
-#include <iostream>
-#include <sstream>
 #include <fstream>
-#include <vector>
+#include <iostream>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include "CImg.h"
-using namespace cimg_library;
+#include <sstream>
+#include <string>
+#include <vector>
 
 /** @brief AllReader class
  *  allows to read videos, sequences ... PGM
- * 
-*/
-class AllReader{
+ *
+ */
+class AllReader {
+public:
+  AllReader(bool d) : display(d) {}
+  AllReader() : AllReader(false) {}
+
+  void read(const std::string &filename, std::vector<unsigned char> &volume,
+            int &width, int &height, int &depth);
+  void save(const std::string &filename,
+            const std::vector<unsigned char> &volume, int width, int height,
+            int depth);
+
+  void readSequence(const std::string &filename,
+                    std::vector<unsigned char> &volume, int &width, int &height,
+                    int &depth);
+  void saveSequence(const std::string &filename,
+                    const std::vector<unsigned char> &volume, int width,
+                    int height, int depth);
+
+  void readTIFF(const std::string &filename, std::vector<unsigned char> &volume,
+                int &width, int &height, int &depth);
+  void saveTIFF(const std::string &filename,
+                const std::vector<unsigned char> &volume, int width, int height,
+                int depth);
+
+  void readVideo(const std::string &filename,
+                 std::vector<unsigned char> &volume, int &width, int &height,
+                 int &depth);
+  void saveVideo(const std::string &filename,
+                 const std::vector<unsigned char> &volume, int width,
+                 int height, int depth);
+
 private:
   bool display;
-
-public:
-  inline AllReader(): display(false) {};
-  inline AllReader(bool d): display(d) {};
-
-  void read(const std::string &filename, std::vector<unsigned char> &volume, int &width, int &height, int &depth);
-  void save(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth);
-
-  void readSequence(const std::string &filename, std::vector<unsigned char> &volume, int &width, int &height, int &depth);
-  void saveSequence(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth);
-
-  void readTIFF(const std::string &filename, std::vector<unsigned char> &volume, int &width, int &height, int &depth);
-  void saveTIFF(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth);
-
-  void readVideo(const std::string &filename, std::vector<unsigned char> &volume, int &width, int &height, int &depth);
-  void saveVideo(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth);
-
 };
