@@ -8,47 +8,59 @@
 #include <iostream>
 #include <string>
 
+namespace bm4d_gpu {
+
 struct Parameters {
-  // Modifyable
-  std::string filename = "data2/t.txt";
-  std::string out_filename = "denoised.tiff";
-  float sim_th = 2500.0;  // Similarity threshold for the first step
-  float hard_th = 2.7;    // Hard schrinkage threshold
+  std::string input_filename;
+  std::string output_filename;
+  float sim_th{2500.0f};  // Similarity threshold for the first step
+  float hard_th{2.7f};    // Hard schrinkage threshold
 
   // Can be changed but not advisable
-  int window_size = 5;  // Search window, barely affects the results [Lebrun M., 2013]
-  int step_size = 3;    // Reasonable values {1,2,3,4} Significantly (exponentially) affects speed,
-                        // slightly affect results
+  int window_size{5};  // Search window, barely affects the results [Lebrun M., 2013]
+  int step_size{3};    // Reasonable values {1,2,3,4}
+                       // Significantly (exponentially) affects speed,
+                       // slightly affect results
   int gpu_device = -1;
 
-  // Fixed in current implementation, changing this can lead to trouble
-  int patch_size = 4;  // Patch size
-  int maxN = 16;       // Maximal number of the patches in one group
-};
+  // Fixed in current implementation
+  const int patch_size{4};  // Patch size
+  const int maxN{16};       // Maximal number of the patches in one group
 
-void inline read_parameters(int argc, char* argv[], Parameters& p) {
-  using namespace std;
-  if (argc == 1) {
-    cout << argv[0] << " input_file[tiff,avi] [sim_th] [hard_th]" << endl;
-    // exit(EXIT_SUCESS);
+  bool parse(const int argc, const char const* const* argv) {
+    // TODO: use boost?
+    if (argc == 1) {
+      return false;
+    }
+
+    if (argc >= 2) input_filename = argv[1];
+    if (argc >= 3) output_filename = argv[2];
+    if (argc >= 4) sim_th = std::atof(argv[3]);
+    if (argc >= 5) hard_th = std::atof(argv[4]);
+
+    if (argc >= 6) window_size = std::atoi(argv[5]);
+    if (argc >= 7) step_size = std::atoi(argv[6]);
+
+    if (argc >= 8) gpu_device = std::atoi(argv[7]);
+
+    return true;
   }
 
-  if (argc >= 2) p.filename = argv[1];
-  if (argc >= 3) p.out_filename = argv[2];
-  if (argc >= 4) p.sim_th = atof(argv[3]);
-  if (argc >= 5) p.hard_th = atof(argv[4]);
+  void printHelp() const {
+    std::cout << "bm4d-gpu input_file[tiff,avi] [sim_th] [hard_th]" << std::endl;
+  }
 
-  if (argc >= 6) p.window_size = atoi(argv[5]);
-  if (argc >= 7) p.step_size = atoi(argv[6]);
-
-  if (argc >= 8) p.gpu_device = atoi(argv[7]);
-
-  cout << "Parameters:" << endl;
-  cout << "            input file: " << p.filename.c_str() << endl;
-  cout << " similarity threshold: " << fixed << setprecision(3) << p.sim_th << endl;
-  cout << "       hard threshold: " << fixed << setprecision(3) << p.hard_th << endl;
-  cout << "          window size: " << p.window_size << endl;
-  cout << "            step size: " << p.step_size << endl;
-  cout << " max cubes in a group: " << p.maxN << endl;
-  cout << "           patch size: " << p.patch_size << endl;
-}
+  void printParameters() const {
+    std::cout << "Parameters:" << std::endl;
+    std::cout << "            input file: " << input_filename << std::endl;
+    std::cout << " similarity threshold: " << std::fixed << std::setprecision(3) << sim_th
+              << std::endl;
+    std::cout << "       hard threshold: " << std::fixed << std::setprecision(3) << hard_th
+              << std::endl;
+    std::cout << "          window size: " << window_size << std::endl;
+    std::cout << "            step size: " << step_size << std::endl;
+    std::cout << " max cubes in a group: " << maxN << std::endl;
+    std::cout << "           patch size: " << patch_size << std::endl;
+  }
+};
+}  // namespace bm4d_gpu

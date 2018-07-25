@@ -16,9 +16,15 @@ namespace bg = bm4d_gpu;
 }
 
 int main(int argc, char* argv[]) {
-  // Take parameters
-  Parameters p;
-  read_parameters(argc, argv, p);
+  // Parse parameters
+  bg::Parameters parameters;
+  if (!parameters.parse(argc, argv)) {
+    std::cerr << "Unable to parse input arguments!" << std::endl;
+    parameters.printHelp();
+    exit(EXIT_FAILURE);
+  }
+
+  parameters.printParameters();
 
   // Define variables
   std::vector<unsigned char> gt;
@@ -28,7 +34,7 @@ int main(int argc, char* argv[]) {
   // Load volume
   AllReader reader(false);       // true - show debug video on load
   Stopwatch loading_file(true);  // true - start right away
-  reader.read(p.filename, noisy_image, width, height, depth);
+  reader.read(parameters.input_filename, noisy_image, width, height, depth);
   loading_file.stop();
   std::cout << "Loading file took: " << loading_file.getSeconds() << std::endl;
   std::cout << "Volume size: (" << width << ", " << height << ", " << depth
@@ -37,7 +43,7 @@ int main(int argc, char* argv[]) {
 
   // Run first step of BM4D
   Stopwatch bm4d_timing(true);  // true - start right away
-  BM4D filter(p, noisy_image, width, height, depth);
+  BM4D filter(parameters, noisy_image, width, height, depth);
   std::vector<unsigned char> denoised_image = filter.run_first_step();
   bm4d_timing.stop();
   std::cout << "BM4D total time: " << bm4d_timing.getSeconds() << std::endl;

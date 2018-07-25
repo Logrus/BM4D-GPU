@@ -16,8 +16,8 @@
 
 class BM4D {
  public:
-  BM4D(Parameters p, const std::vector<uchar>& in_noisy_volume, const int& width, const int& height,
-       const int& depth)
+  BM4D(bm4d_gpu::Parameters p, const std::vector<uchar>& in_noisy_volume, const int& width,
+       const int& height, const int& depth)
       : params(p),
         width(width),
         height(height),
@@ -85,5 +85,5 @@ class BM4D {
   dim3 grid;
 
   cudaDeviceProp d_prop;
-  Parameters params;
+  bm4d_gpu::Parameters params;
 };
