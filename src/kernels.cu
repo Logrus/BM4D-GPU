@@ -112,7 +112,7 @@ __device__ float dist(const uchar* __restrict img, const uint3 size, const uint3
 __global__ void k_block_matching(const uchar* __restrict img,
                                  const uint3 size,
                                  const uint3 tsize,
-                                 const Parameters params,
+                                 const bm4d_gpu::Parameters params,
                                  uint3float1* d_stacks,
                                  uint* d_nstacks)
 {
@@ -157,7 +157,7 @@ __global__ void k_block_matching(const uchar* __restrict img,
 void run_block_matching(const uchar* __restrict d_noisy_volume,
                         const uint3 size,
                         const uint3 tsize,
-                        const Parameters params,
+                        const bm4d_gpu::Parameters params,
                         uint3float1 *d_stacks,
                         uint *d_nstacks,
                         const cudaDeviceProp &d_prop)
@@ -205,7 +205,7 @@ __global__ void k_nstack_to_pow(uint3float1* d_stacks, uint* d_nstacks, const in
 
 __global__ void k_gather_cubes(const uchar* __restrict img,
                                const uint3 size,
-                               const Parameters params,
+                               const bm4d_gpu::Parameters params,
                                const uint3float1* __restrict d_stacks,
                                const uint array_size,
                                float* d_gathered4dstack)
@@ -244,7 +244,7 @@ struct is_not_empty
 void gather_cubes(const uchar* __restrict img,
                   const uint3 size,
                   const uint3 tsize,
-                  const Parameters params,
+                  const bm4d_gpu::Parameters params,
                   uint3float1* &d_stacks,
                   uint* d_nstacks,
                   float* &d_gathered4dstack,
@@ -511,7 +511,7 @@ void run_wht_ht_iwht(float* d_gathered4dstack,
                      uint* d_nstacks, 
                      const uint3 tsize, 
                      float* &d_group_weights,
-                     const Parameters params,
+                     const bm4d_gpu::Parameters params,
                      const cudaDeviceProp &d_prop)
 {
   int groups = tsize.x*tsize.y*tsize.z;
@@ -601,7 +601,7 @@ __global__ void k_aggregation(float* d_denoised_volume,
                               uint3float1* d_stacks, 
                               uint* d_nstacks, 
                               float* group_weights, 
-                              const Parameters params,
+                              const bm4d_gpu::Parameters params,
                               const uint* d_accumulated_nstacks){
 
   uint groups = (tsize.x*tsize.y*tsize.z);
@@ -663,7 +663,7 @@ void run_aggregation(float* final_image,
                      uint3float1* d_stacks, 
                      uint* d_nstacks, 
                      float* d_group_weights,
-                     const Parameters params,
+                     const bm4d_gpu::Parameters params,
                      int gather_stacks_sum,
                      const cudaDeviceProp &d_prop)
 {

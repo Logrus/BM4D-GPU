@@ -28,7 +28,7 @@ struct Parameters {
   const int patch_size{4};  // Patch size
   const int maxN{16};       // Maximal number of the patches in one group
 
-  bool parse(const int argc, const char const* const* argv) {
+  bool parse(const int argc, const char* const* const argv) {
     // TODO: use boost?
     if (argc == 1) {
       return false;
