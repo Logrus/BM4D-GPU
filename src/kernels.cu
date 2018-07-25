@@ -3,12 +3,15 @@
 * v.d.tananaev [at] gmail [dot] com
 */
 #include <bm4d-gpu/kernels.cuh>
+
 #include <thrust/device_vector.h>
 #include <thrust/device_ptr.h>
 #include <thrust/copy.h>
 #include <thrust/remove.h>
 #include <thrust/reduce.h>
 #include <thrust/execution_policy.h>
+
+
 #include <math.h>
 
 __global__ void k_debug_lookup_stacks(uint3float1 * d_stacks, int total_elements){

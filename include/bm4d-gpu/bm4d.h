@@ -10,14 +10,14 @@
 #include <string>
 #include <vector>
 
-#include "kernels.cuh"
-#include "parameters.h"
-#include "stopwatch.hpp"
+#include <bm4d-gpu/parameters.h>
+#include <bm4d-gpu/kernels.cuh>
+#include <bm4d-gpu/stopwatch.hpp>
 
 class BM4D {
  public:
-  BM4D(Parameters p, const std::vector<uchar> &in_noisy_volume, const int &width, const int &height,
-       const int &depth)
+  BM4D(Parameters p, const std::vector<uchar>& in_noisy_volume, const int& width, const int& height,
+       const int& depth)
       : params(p),
         width(width),
         height(height),
@@ -37,13 +37,13 @@ class BM4D {
     tsize = twidth * theight * tdepth;
 
     // uint3float1* tmp_arr = new uint3float1[params.maxN*tsize];
-    checkCudaErrors(cudaMalloc((void **)&d_stacks, sizeof(uint3float1) * (params.maxN * tsize)));
+    checkCudaErrors(cudaMalloc((void**)&d_stacks, sizeof(uint3float1) * (params.maxN * tsize)));
     // std::cout << "Allocated " << sizeof(uint3float1)*(params.maxN*tsize) << "
     // bytes for d_stacks" << std::endl; checkCudaErrors(cudaMemcpy(d_stacks,
     // tmp_arr, sizeof(uint3float1)*params.maxN*tsize, cudaMemcpyHostToDevice));
     // delete[] tmp_arr;
 
-    checkCudaErrors(cudaMalloc((void **)&d_nstacks, sizeof(uint) * (tsize)));
+    checkCudaErrors(cudaMalloc((void**)&d_nstacks, sizeof(uint) * (tsize)));
     checkCudaErrors(cudaMemset(d_nstacks, 0, sizeof(uint) * tsize));
     // std::cout << "Allocated " << (tsize) << " elements for d_nstacks" <<
     // std::endl;
@@ -73,10 +73,10 @@ class BM4D {
   std::vector<uchar> noisy_volume;
 
   // Device variables
-  float *d_gathered4dstack;
-  uint3float1 *d_stacks;
-  uint *d_nstacks;
-  float *d_group_weights;
+  float* d_gathered4dstack;
+  uint3float1* d_stacks;
+  uint* d_nstacks;
+  float* d_group_weights;
   int width, height, depth, size;
   int twidth, theight, tdepth, tsize;
 

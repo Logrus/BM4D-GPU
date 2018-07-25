@@ -3,19 +3,20 @@
  * v.d.tananaev [at] gmail [dot] com
  */
 #include <bm4d-gpu/allreader.h>
+
 #ifndef idx3
 #define idx3(x, y, z, x_size, y_size) ((x) + ((y) + (y_size) * (z)) * (x_size))
 #endif
 
-void eat_comment(std::ifstream &f) {
+void eat_comment(std::ifstream& f) {
   char linebuf[1024];
   char ppp;
   while (ppp = f.peek(), ppp == '\n' || ppp == '\r') f.get();
   if (ppp == '#') f.getline(linebuf, 1023);
 }
 
-bool readPGM(const std::string &filename, std::vector<unsigned char> &image, int &width,
-             int &height) {
+bool readPGM(const std::string& filename, std::vector<unsigned char>& image, int& width,
+             int& height) {
   std::ifstream File(filename.c_str(), std::ifstream::binary);
   int length, maxval;
   // Get size
@@ -33,12 +34,12 @@ bool readPGM(const std::string &filename, std::vector<unsigned char> &image, int
   File >> maxval;
   File.get();                    // Remove all excessive spaces
   image.resize(width * height);  // (Re)Initialize image from sizes
-  File.read(reinterpret_cast<char *>(image.data()), length);
+  File.read(reinterpret_cast<char*>(image.data()), length);
   return true;
 }
 
-void AllReader::readSequence(const std::string &filename, std::vector<unsigned char> &volume,
-                             int &width, int &height, int &depth) {
+void AllReader::readSequence(const std::string& filename, std::vector<unsigned char>& volume,
+                             int& width, int& height, int& depth) {
   std::vector<std::string> input;
   std::string inputDir;
   // Determine input directory
@@ -89,8 +90,8 @@ void AllReader::readSequence(const std::string &filename, std::vector<unsigned c
 //  volume.assign(tmp_img.begin(), tmp_img.end());
 //}
 
-void AllReader::readVideo(const std::string &filename, std::vector<unsigned char> &volume,
-                          int &width, int &height, int &depth) {
+void AllReader::readVideo(const std::string& filename, std::vector<unsigned char>& volume,
+                          int& width, int& height, int& depth) {
   cv::VideoCapture capture(filename);
 
   width = capture.get(CV_CAP_PROP_FRAME_WIDTH);
@@ -118,8 +119,8 @@ void AllReader::readVideo(const std::string &filename, std::vector<unsigned char
   }
 }
 
-void AllReader::read(const std::string &filename, std::vector<unsigned char> &volume, int &width,
-                     int &height, int &depth) {
+void AllReader::read(const std::string& filename, std::vector<unsigned char>& volume, int& width,
+                     int& height, int& depth) {
   // Determine extension
   std::string ext = filename;
   ext.erase(0, ext.find_last_of('.'));

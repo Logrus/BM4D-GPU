@@ -1,23 +1,19 @@
-#ifndef _STOPWATCH_HPP_
-#define _STOPWATCH_HPP_
-
+#pragma once
 
 #ifdef WIN32
-  #include <windows.h>
+#include <windows.h>
 #else
-  #include <unistd.h>
-  #include <time.h>
-  #include <sys/times.h>
-  #include <sys/time.h>
+#include <sys/time.h>
+#include <sys/times.h>
+#include <time.h>
+#include <unistd.h>
 #endif
-
 
 /**
  * \brief Implementation of high precision wall-time stopwatch based on system timers.
  */
-class Stopwatch
-{
-private:
+class Stopwatch {
+ private:
   typedef unsigned long long ticks_t;
 
   ticks_t mStartTime;
@@ -27,8 +23,7 @@ private:
   /**
    * \brief Get current system timer status in ticks.
    */
-  ticks_t now()
-  {
+  ticks_t now() {
 #ifdef WIN32
     LARGE_INTEGER ticks;
     ::QueryPerformanceCounter(&ticks);
@@ -40,53 +35,45 @@ private:
 #endif
   }
 
-
   /**
    * Measure current time and update mInterval.
    */
-  void measureTime()
-  {
+  void measureTime() {
 #ifdef WIN32
     LARGE_INTEGER ticks;
     ::QueryPerformanceFrequency(&ticks);
     mInterval += static_cast<double>(now() - mStartTime) / static_cast<double>(ticks.QuadPart);
 #else
-    mInterval += static_cast<double>((now() - mStartTime)*1E-9);
+    mInterval += static_cast<double>((now() - mStartTime) * 1E-9);
 #endif
   }
 
-
-public:
+ public:
   /**
    * \brief Create new stopwatch. The stopwatch are not running when created.
    */
-  Stopwatch() : mTiming(false), mInterval(0.0) { }
+  Stopwatch() : mTiming(false), mInterval(0.0) {}
 
   /**
    * \brief Create new stopwatch (and optionaly start it).
    * \param start If start is true, the stapwatch are started immediately.
    */
-  Stopwatch(bool start)
-  {
+  Stopwatch(bool start) {
     if (start) this->start();
   }
-
 
   /**
    * \brief Start the stopwatch. If the stopwatch are already timing, they are reset.
    */
-  void start()
-  {
+  void start() {
     mTiming = true;
     mStartTime = now();
   }
 
-
   /**
    * \brief Stop the stopwatch. Multiple invocation has no effect.
    */
-  void stop()
-  {
+  void stop() {
     if (mTiming == false) return;
     mTiming = false;
     measureTime();
@@ -95,31 +82,22 @@ public:
   /**
    * \brief Stop and reset the stopwatch. Multiple invocation has no effect.
    */
-  void reset()
-  {
+  void reset() {
     mInterval = 0.0;
     if (mTiming == false) return;
     mTiming = false;
   }
 
-
   /**
    * \brief Return measured time in seconds.
    */
-  double getSeconds()
-  {
-    if (mTiming)
-      measureTime();
+  double getSeconds() {
+    if (mTiming) measureTime();
     return mInterval;
   }
 
   /**
    * \brief Return mesured time in miliseconds.
    */
-  double getMiliseconds()
-  {
-    return getSeconds() * 1000.0;
-  }
+  double getMiliseconds() { return getSeconds() * 1000.0; }
 };
-
-#endif
