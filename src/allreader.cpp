@@ -78,18 +78,6 @@ void AllReader::readSequence(const std::string& filename, std::vector<unsigned c
   }
 }
 
-// void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char> &volume, int
-// &width, int &height, int &depth){
-//  CImg<unsigned char> tmp_img;
-//  tmp_img.load_tiff(filename.c_str());
-//  width = tmp_img.width();
-//  height = tmp_img.height();
-//  depth = tmp_img.depth();
-//  int size = width*height*depth;
-//  volume.resize(size);
-//  volume.assign(tmp_img.begin(), tmp_img.end());
-//}
-
 void AllReader::readVideo(const std::string& filename, std::vector<unsigned char>& volume,
                           int& width, int& height, int& depth) {
   cv::VideoCapture capture(filename);
