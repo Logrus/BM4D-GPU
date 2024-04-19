@@ -5,14 +5,11 @@
 
 std::vector<uchar> BM4D::run_first_step()
 {
-  // Stopwatch copyingtodevice(true);
   uchar *d_noisy_volume;
   assert(size == noisy_volume.size());
   checkCudaErrors(cudaMalloc((void **)&d_noisy_volume, sizeof(uchar) * size));
   checkCudaErrors(cudaMemcpy((void *)d_noisy_volume, (void *)noisy_volume.data(),
                              sizeof(uchar) * size, cudaMemcpyHostToDevice));
-  // copyingtodevice.stop(); std::cout<<"Copying to device took:
-  // "<<copyingtodevice.getSeconds()<<std::endl;
 
   uint3 im_size = make_uint3(width, height, depth);
   uint3 tr_size =
@@ -29,10 +26,8 @@ std::vector<uchar> BM4D::run_first_step()
   Stopwatch gatheringcubes(true);
   gather_cubes(d_noisy_volume, im_size, tr_size, params, d_stacks, d_nstacks, d_gathered4dstack,
                gather_stacks_sum, d_prop);
-  // std::cout << "Acquied size " << gather_stacks_sum << std::endl;
   gatheringcubes.stop();
   std::cout << "Gathering cubes took: " << gatheringcubes.getSeconds() << std::endl;
-  // debug_kernel(d_gathered4dstack);
   checkCudaErrors(cudaFree(d_noisy_volume));
 
   // Perform 3D DCT
@@ -40,7 +35,6 @@ std::vector<uchar> BM4D::run_first_step()
   run_dct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_prop);
   dct_forward.stop();
   std::cout << "3D DCT forwars took: " << dct_forward.getSeconds() << std::endl;
-  // debug_kernel(d_gathered4dstack);
 
   // Do WHT in 4th dim + Hard Thresholding + IWHT
   float *d_group_weights;
@@ -55,7 +49,6 @@ std::vector<uchar> BM4D::run_first_step()
   run_idct3d(d_gathered4dstack, gather_stacks_sum, params.patch_size, d_prop);
   dct_backward.stop();
   std::cout << "3D DCT backwards took: " << dct_backward.getSeconds() << std::endl;
-  // debug_kernel(d_gathered4dstack);
 
   // Aggregate
   float *final_image = new float[width * height * depth];
