@@ -487,7 +487,7 @@ __global__ void k_run_wht_ht_iwht(float *d_gathered4dstack,
     }
 
     fwht(group_vector, size);
-    //// Threshold
+    // Threshold
     float threshold = hard_th * sqrtf((float)size);
     d_group_weights[cuIdx * stride + x + y * patch_size + z * patch_size * patch_size] = 0;
     for (int i = 0; i < size; i++)
@@ -502,7 +502,7 @@ __global__ void k_run_wht_ht_iwht(float *d_gathered4dstack,
         group_vector[i] = 0;
       }
     }
-    //// Inverse fwht
+    // Inverse fwht
     fwht(group_vector, size);
     for (int i = 0; i < size; i++)
     {
