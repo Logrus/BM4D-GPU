@@ -82,9 +82,9 @@ void AllReader::readVideo(const std::string& filename, std::vector<unsigned char
                           int& width, int& height, int& depth) {
   cv::VideoCapture capture(filename);
 
-  width = capture.get(CV_CAP_PROP_FRAME_WIDTH);
-  height = capture.get(CV_CAP_PROP_FRAME_HEIGHT);
-  depth = capture.get(CV_CAP_PROP_FRAME_COUNT);
+  width = capture.get(cv::CAP_PROP_FRAME_WIDTH);
+  height = capture.get(cv::CAP_PROP_FRAME_HEIGHT);
+  depth = capture.get(cv::CAP_PROP_FRAME_COUNT);
 
   volume.resize(width * height * depth);
 
@@ -101,7 +101,7 @@ void AllReader::readVideo(const std::string& filename, std::vector<unsigned char
 
     if (this->display) {
       cv::imshow("window", frame);
-      char key = cvWaitKey(10);
+      char key = cv::waitKey(10);
       if (key == 27) break;  // ESC
     }
   }

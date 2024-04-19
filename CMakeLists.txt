@@ -28,6 +28,5 @@ set(H
         )
 
 # TODO: separate to lib/executable/gui
-# TODO: add matlab/python bindings
 cuda_add_executable(bm4d-gpu ${CXX} ${CU} ${H})
 target_link_libraries(bm4d-gpu ${OpenCV_LIBRARIES})

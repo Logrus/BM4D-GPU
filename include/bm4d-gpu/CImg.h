@@ -47038,7 +47038,7 @@ namespace cimg_library_suffixed {
       }
       cimg::mutex(9);
       if (capture_width!=capture_w[camera_index]) {
-        cvSetCaptureProperty(capture[camera_index],CV_CAP_PROP_FRAME_WIDTH,capture_width);
+        cvSetCaptureProperty(capture[camera_index],cv::CAP_PROP_FRAME_WIDTH,capture_width);
         capture_w[camera_index] = capture_width;
       }
       if (capture_height!=capture_h[camera_index]) {
