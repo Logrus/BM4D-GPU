@@ -7,4 +7,5 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     cmake \
-    git
+    git \
+    ninja-build

@@ -1,7 +1,6 @@
-/*
- * 2016, Vladislav Tananaev
- * v.d.tananaev [at] gmail [dot] com
- */
+// SPDX-License-Identifier: MIT
+// 2024, Vladislav Tananaev
+
 #include <bm4d-gpu/allreader.h>
 #include <bm4d-gpu/bm4d.h>
 #include <bm4d-gpu/parameters.h>
@@ -11,14 +10,17 @@
 #include <iostream>
 #include <string>
 
-namespace {
-namespace bg = bm4d_gpu;
+namespace
+{
+  namespace bg = bm4d_gpu;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
   // Parse parameters
   bg::Parameters parameters;
-  if (!parameters.parse(argc, argv)) {
+  if (!parameters.parse(argc, argv))
+  {
     std::cerr << "Unable to parse input arguments!" << std::endl;
     parameters.printHelp();
     exit(EXIT_FAILURE);
@@ -32,8 +34,8 @@ int main(int argc, char* argv[]) {
   int width, height, depth;
 
   // Load volume
-  AllReader reader(false);       // true - show debug video on load
-  Stopwatch loading_file(true);  // true - start right away
+  AllReader reader(false);      // true - show debug video on load
+  Stopwatch loading_file(true); // true - start right away
   reader.read(parameters.input_filename, noisy_image, width, height, depth);
   loading_file.stop();
   std::cout << "Loading file took: " << loading_file.getSeconds() << std::endl;
@@ -42,7 +44,7 @@ int main(int argc, char* argv[]) {
   reader.read("gt/t.txt", gt, width, height, depth);
 
   // Run first step of BM4D
-  Stopwatch bm4d_timing(true);  // true - start right away
+  Stopwatch bm4d_timing(true); // true - start right away
   BM4D filter(parameters, noisy_image, width, height, depth);
   std::vector<unsigned char> denoised_image = filter.run_first_step();
   bm4d_timing.stop();

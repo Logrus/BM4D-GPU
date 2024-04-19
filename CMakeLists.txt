@@ -4,7 +4,7 @@ project(bm4d-gpu)
 ## Add support for C++14
 set(CMAKE_CXX_STANDARD 14)
 
-option(BUILD_CLI "Build cli (requires OpenCV)" OFF)
+option(BUILD_CLI "Build cli (requires OpenCV)" ON)
 
 find_package(CUDA REQUIRED)
 
