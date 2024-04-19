@@ -1,5 +1,20 @@
 {
     "build": {
         "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "cheshirekow.cmake-format",
+                "ms-python.black-formatter",
+                "ms-python.debugpy",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools",
+                "streetsidesoftware.code-spell-checker",
+                "twxs.cmake",
+            ]
+        }
     }
 }
