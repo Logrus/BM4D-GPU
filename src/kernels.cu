@@ -525,7 +525,7 @@ __global__ void k_sum_group_weights(float *d_group_weights, uint *d_accumulated_
       counter += d_group_weights[idx];
     }
     __syncthreads();
-    d_group_weights[cuIdx * stride] = 1.0 / (float)counter;
+    d_group_weights[cuIdx * stride] = counter > 0. ? 1.0 / (float)counter : 0.;
   }
 }
 
@@ -628,7 +628,7 @@ void aggregation_cpu(float *image_vol,
 
   for (int i = 0; i < size.x * size.y * size.z; ++i)
   {
-    image_vol[i] /= weights_vol[i];
+    image_vol[i] = weights_vol[i] > 0. ? image_vol[i] / weights_vol[i] : 0.;
   }
 }
 
