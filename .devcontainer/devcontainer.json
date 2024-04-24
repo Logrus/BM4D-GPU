@@ -16,5 +16,8 @@
                 "twxs.cmake",
             ]
         }
-    }
+    },
+    "mounts": [
+        "source=${localWorkspaceFolder}/data,target=/workspaces/data,type=bind,consistency=cached"
+    ]
 }
