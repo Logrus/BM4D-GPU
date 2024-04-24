@@ -122,6 +122,33 @@ void AllReader::readVideo(const std::string &filename, std::vector<unsigned char
   }
 }
 
+void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char> &volume, int &width,
+                         int &height, int &depth)
+{
+
+  std::vector<cv::Mat> images;
+  bool success = cv::imreadmulti(filename, images);
+
+  if (!success || images.empty())
+  {
+    std::cerr << "Could not open or find the image" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  depth = images.size();
+  width = images[0].cols;
+  height = images[0].rows;
+
+  volume.resize(width * height * depth);
+
+  for (int slice = 0; slice < depth; ++slice)
+  {
+    for (int y = 0; y < height; ++y)
+      for (int x = 0; x < width; ++x)
+        volume[idx3(x, y, slice, width, height)] = images[slice].at<unsigned char>(y, x);
+  }
+}
+
 void AllReader::read(const std::string &filename, std::vector<unsigned char> &volume, int &width,
                      int &height, int &depth)
 {
@@ -135,6 +162,10 @@ void AllReader::read(const std::string &filename, std::vector<unsigned char> &vo
   else if (ext == ".avi" || ext == ".AVI")
   {
     readVideo(filename, volume, width, height, depth);
+  }
+  else if (ext == ".tiff" || ext == ".TIFF")
+  {
+    readTIFF(filename, volume, width, height, depth);
   }
   else
   {
