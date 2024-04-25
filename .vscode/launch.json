@@ -8,11 +8,10 @@
             "name": "Debug launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "/workspaces/BM4D-GPU/build/bm4d-gpu",
+            "program": "${workspaceRoot}/build/bm4d-gpu",
             "args": [
-                "/workspaces/data/rec62_noisy.tiff",
-                "2500",
-                "2.7"
+                "${workspaceRoot}/data/rec62_noisy.tiff",
+                "${workspaceRoot}/data/debug_denoised.tiff",
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

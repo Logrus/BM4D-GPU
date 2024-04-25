@@ -50,6 +50,8 @@ int main(int argc, char *argv[])
   bm4d_timing.stop();
   std::cout << "BM4D total time: " << bm4d_timing.getSeconds() << std::endl;
 
+  reader.saveTIFF(parameters.output_filename, denoised_image, width, height, depth);
+
   std::cout << "PSNR noisy: " << bg::psnr(gt, noisy_image) << std::endl;
   std::cout << "PSNR denoised: " << bg::psnr(gt, denoised_image) << std::endl;
   std::cout << "PSNR reconstructed: " << bg::psnr(noisy_image, denoised_image) << std::endl;

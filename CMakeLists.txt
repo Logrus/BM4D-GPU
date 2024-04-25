@@ -9,6 +9,10 @@ option(BUILD_CLI "Build cli (requires OpenCV)" ON)
 # BM4D library
 find_package(CUDA REQUIRED)
 
+# Autodetect cuda architecture on current platform and build for them
+cuda_select_nvcc_arch_flags(ARCH_FLAGS Auto)
+list(APPEND CUDA_NVCC_FLAGS ${ARCH_FLAGS})
+
 include_directories(include)
 
 set(BM4D-H

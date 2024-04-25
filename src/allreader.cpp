@@ -149,6 +149,25 @@ void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char>
   }
 }
 
+void AllReader::saveTIFF(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth)
+{
+  std::vector<cv::Mat> images;
+  for (int slice = 0; slice < depth; ++slice)
+  {
+    cv::Mat image(height, width, CV_8UC1);
+    for (int y = 0; y < height; ++y)
+      for (int x = 0; x < width; ++x)
+      {
+
+        image.at<unsigned char>(y, x) = volume[idx3(x, y, slice, width, height)];
+      }
+
+    images.push_back(std::move(image));
+  }
+
+  cv::imwritemulti(filename, images);
+}
+
 void AllReader::read(const std::string &filename, std::vector<unsigned char> &volume, int &width,
                      int &height, int &depth)
 {

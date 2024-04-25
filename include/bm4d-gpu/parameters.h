@@ -59,7 +59,7 @@ namespace bm4d_gpu
 
     void printHelp() const
     {
-      std::cout << "bm4d-gpu input_file[tiff,avi] [sim_th] [hard_th]" << std::endl;
+      std::cout << "bm4d-gpu input_file[tiff,avi] output_file[tiff,avi] [[sim_th] [hard_th]]" << std::endl;
     }
 
     void printParameters() const

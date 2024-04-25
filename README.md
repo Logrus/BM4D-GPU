@@ -29,7 +29,7 @@ Alternatively, it is possible to build image using `.devcontainer/build_image.sh
 Executing from root folder of a project (where CMakeLists.txt is located).
 
 ```bash
-mkdir build
-cmake -b build -GNinja
+mkdir build && \
+cmake -B build -GNinja && \
 cmake --build build
 ```
