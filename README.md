@@ -11,7 +11,7 @@ However, some header files are from NVIDIA and hold a different license, which i
 
 ### Installing docker
 
-TODO: provide pointers to install docker, also note on nvidia package
+Make sure that you have [inastalled docker](https://docs.docker.com/engine/install/) and [nvidia container toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
 ### Opening project in vscode
 
