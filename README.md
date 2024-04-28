@@ -4,7 +4,7 @@
 
 The majority of the code is licensed under MIT license. 
 
-However, some header files are from NVIDIA and hold a different license, which is included in the header.
+However, some header files are from NVIDIA and hold a different license, which is included at the beginning of each relevant file.
 
 
 ## Working with devcontainer
