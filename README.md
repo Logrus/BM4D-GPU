@@ -1,9 +1,5 @@
 # BM4D GPU (CUDA) implementation
 
-## About project
-
-TODO: write summary
-
 ## License
 
 The majority of the code is licensed under MIT license. 
