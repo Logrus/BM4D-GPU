@@ -107,19 +107,20 @@ __device__ void add_stack(uint3float1 *d_stacks,
 __device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref, const int3 cmp, const int k)
 {
   const float normalizer = 1.0f / (k * k * k);
+  const int3 isize = make_int3(size.x, size.y, size.z);
   float diff{0.f};
   for (int z = 0; z < k; ++z)
     for (int y = 0; y < k; ++y)
       for (int x = 0; x < k; ++x)
       {
-        const int rx = max(0, min(x + ref.x, size.x - 1));
-        const int ry = max(0, min(y + ref.y, size.y - 1));
-        const int rz = max(0, min(z + ref.z, size.z - 1));
-        const int cx = max(0, min(x + cmp.x, size.x - 1));
-        const int cy = max(0, min(y + cmp.y, size.y - 1));
-        const int cz = max(0, min(z + cmp.z, size.z - 1));
+        const int rx = max(0, min(x + ref.x, isize.x - 1));
+        const int ry = max(0, min(y + ref.y, isize.y - 1));
+        const int rz = max(0, min(z + ref.z, isize.z - 1));
+        const int cx = max(0, min(x + cmp.x, isize.x - 1));
+        const int cy = max(0, min(y + cmp.y, isize.y - 1));
+        const int cz = max(0, min(z + cmp.z, isize.z - 1));
         // printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
-        float tmp = (img[(rx) + (ry)*size.x + (rz)*size.x * size.y] - img[(cx) + (cy)*size.x + (cz)*size.x * size.y]);
+        const float tmp = (img[(rx) + (ry)*isize.x + (rz)*isize.x * isize.y] - img[(cx) + (cy)*isize.x + (cz)*isize.x * isize.y]);
         diff += tmp * tmp * normalizer;
       }
   return diff ;
