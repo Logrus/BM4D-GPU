@@ -104,24 +104,25 @@ __device__ void add_stack(uint3float1 *d_stacks,
   }
 }
 
-__device__ float dist(const uchar *__restrict img, const uint3 size, const uint3 ref, const uint3 cmp, const int k)
+__device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref, const int3 cmp, const int k)
 {
-  float diff(0);
+  const float normalizer = 1.0f / (k * k * k);
+  float diff{0.f};
   for (int z = 0; z < k; ++z)
     for (int y = 0; y < k; ++y)
       for (int x = 0; x < k; ++x)
       {
-        int rx = max(0, min(x + ref.x, size.x - 1));
-        int ry = max(0, min(y + ref.y, size.y - 1));
-        int rz = max(0, min(z + ref.z, size.z - 1));
-        int cx = max(0, min(x + cmp.x, size.x - 1));
-        int cy = max(0, min(y + cmp.y, size.y - 1));
-        int cz = max(0, min(z + cmp.z, size.z - 1));
+        const int rx = max(0, min(x + ref.x, size.x - 1));
+        const int ry = max(0, min(y + ref.y, size.y - 1));
+        const int rz = max(0, min(z + ref.z, size.z - 1));
+        const int cx = max(0, min(x + cmp.x, size.x - 1));
+        const int cy = max(0, min(y + cmp.y, size.y - 1));
+        const int cz = max(0, min(z + cmp.z, size.z - 1));
         // printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx, cy, cz);
         float tmp = (img[(rx) + (ry)*size.x + (rz)*size.x * size.y] - img[(cx) + (cy)*size.x + (cz)*size.x * size.y]);
-        diff += tmp * tmp;
+        diff += tmp * tmp * normalizer;
       }
-  return diff / (k * k * k);
+  return diff ;
 }
 
 __global__ void k_block_matching(const uchar *__restrict img,
@@ -150,13 +151,13 @@ __global__ void k_block_matching(const uchar *__restrict img,
         int wye = fminf(size.y - 1, y + params.window_size); // window y end
         int wze = fminf(size.z - 1, z + params.window_size); // window z end
 
-        uint3 ref = make_uint3(x, y, z);
+        int3 ref = make_int3(x, y, z);
 
         for (int wz = wzb; wz <= wze; wz++)
           for (int wy = wyb; wy <= wye; wy++)
             for (int wx = wxb; wx <= wxe; wx++)
             {
-              float w = dist(img, size, ref, make_uint3(wx, wy, wz), params.patch_size);
+              float w = dist(img, size, ref, make_int3(wx, wy, wz), params.patch_size);
               // printf("Dist %f\n", w);
 
               if (w < params.sim_th)

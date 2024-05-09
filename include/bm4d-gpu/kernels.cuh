@@ -59,4 +59,8 @@ void run_aggregation(float *final_image, const uint3 size, const uint3 tsize,
                      const float *d_gathered4dstack, uint3float1 *d_stacks, uint *d_nstacks,
                      float *group_weights, const bm4d_gpu::Parameters params, int gather_stacks_sum,
                      const cudaDeviceProp &d_prop);
+
+// Helper functions
+__device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref, const int3 cmp, const int k);
+
 void debug_kernel(float *tmp);
