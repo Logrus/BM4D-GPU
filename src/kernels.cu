@@ -109,8 +109,8 @@ __device__ __host__ float dist(const uchar *__restrict img, const uint3 size, co
   const float normalizer = 1.0f / (k * k * k);
   const int3 isize = make_int3(size.x, size.y, size.z);
   float diff{0.f};
-  for (int z = 0; z < k; ++z)
-    for (int y = 0; y < k; ++y)
+  for (int z = 0; z < k; ++z) {
+    for (int y = 0; y < k; ++y){ 
       for (int x = 0; x < k; ++x)
       {
         const int rx = max(0, min(x + ref.x, isize.x - 1));
@@ -123,6 +123,8 @@ __device__ __host__ float dist(const uchar *__restrict img, const uint3 size, co
         const float tmp = (img[(rx) + (ry)*isize.x + (rz)*isize.x * isize.y] - img[(cx) + (cy)*isize.x + (cz)*isize.x * isize.y]);
         diff += tmp * tmp * normalizer;
       }
+    }
+  }
   return diff ;
 }
 
