@@ -51,10 +51,9 @@ std::vector<uchar> BM4D::run_first_step()
   std::cout << "3D DCT backwards took: " << dct_backward.getSeconds() << std::endl;
 
   // Aggregate
-  float *final_image = new float[width * height * depth];
-  memset(final_image, 0.0, sizeof(float) * width * height * depth);
+  std::vector<float> final_image(width * height * depth, 0.0f);
   Stopwatch aggregation_t(true);
-  run_aggregation(final_image, im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks,
+  run_aggregation(final_image.data(), im_size, tr_size, d_gathered4dstack, d_stacks, d_nstacks,
                   d_group_weights, params, gather_stacks_sum, d_prop);
   aggregation_t.stop();
   std::cout << "Aggregation took: " << aggregation_t.getSeconds() << std::endl;
@@ -62,6 +61,5 @@ std::vector<uchar> BM4D::run_first_step()
   {
     noisy_volume[i] = static_cast<uchar>(final_image[i]);
   }
-  delete[] final_image;
   return noisy_volume;
 }
