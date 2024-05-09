@@ -20,12 +20,19 @@ Development environment would be build in vscode.
 
 Alternatively, it is possible to build image using `.devcontainer/build_image.sh` script.
 
-## Build with cmake from devcontainer
+## Build with cmake
 
 Executing from root folder of a project (where CMakeLists.txt is located).
 
 ```bash
-mkdir build && \
 cmake -B build -GNinja && \
 cmake --build build
+```
+
+## Building and running tests
+
+```bash
+cmake -B build -GNinja -DBUILD_TESTS=ON && \
+cmake --build build && \
+ctest --test-dir build/tests
 ```

@@ -3,8 +3,10 @@ project(bm4d-gpu)
 
 # Add support for C++14
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_CLI "Build cli (requires OpenCV)" ON)
+option(BUILD_TESTS "Build unit-tests" OFF)
 
 # BM4D library
 find_package(CUDA REQUIRED)
@@ -39,3 +41,7 @@ if(BUILD_CLI)
   cuda_add_executable(bm4d-gpu ${CLI-CXX} ${CLI-H})
   target_link_libraries(bm4d-gpu bm4d-gpu-lib ${OpenCV_LIBRARIES})
 endif()
+
+# if (BUILD_TESTS)
+  add_subdirectory(tests)
+# endif()
