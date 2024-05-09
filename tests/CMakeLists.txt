@@ -17,6 +17,7 @@ add_executable(
 target_link_libraries(
   test_bm4d
   GTest::gtest_main
+  bm4d-gpu-lib
 )
 
 include(GoogleTest)
