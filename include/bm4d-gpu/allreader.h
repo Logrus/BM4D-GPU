@@ -2,22 +2,20 @@
 // 2024, Vladislav Tananaev
 
 #pragma once
-#include <cstdlib> // EXIT_SUCESS, EXIT_FAILURE
+#include <cstdlib>  // EXIT_SUCESS, EXIT_FAILURE
 #include <fstream>
 #include <iostream>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
 /** @brief AllReader class
  *  allows to read videos, sequences ... PGM
  */
-class AllReader
-{
-public:
+class AllReader {
+ public:
   AllReader(bool d) : display(d) {}
   AllReader() : AllReader(false) {}
 
@@ -41,6 +39,6 @@ public:
   void saveVideo(const std::string &filename, const std::vector<unsigned char> &volume, int width,
                  int height, int depth);
 
-private:
+ private:
   bool display;
 };

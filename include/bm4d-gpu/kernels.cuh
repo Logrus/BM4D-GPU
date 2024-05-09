@@ -2,14 +2,15 @@
 // 2024, Vladislav Tananaev
 
 #pragma once
-#include <cassert>
-#include <iostream>
-#include <vector>
-
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <vector_functions.h>
 #include <vector_types.h>
+
+#include <cassert>
+#include <iostream>
+#include <vector>
+
 #include "helper_cuda.h"
 #include "parameters.h"
 #include "stdio.h"
@@ -22,17 +23,15 @@
 typedef unsigned char uchar;
 typedef unsigned int uint;
 
-struct uint3float1
-{
+struct uint3float1 {
   uint x;
   uint y;
   uint z;
   float val;
-  __host__ __device__ uint3float1() : x(0), y(0), z(0), val(-1){};
+  __host__ __device__ uint3float1() : x(0), y(0), z(0), val(-1) {};
   __host__ __device__ uint3float1(uint x, uint y, uint z, float val) : x(x), y(y), z(z), val(val) {}
 };
-inline uint3float1 make_uint3float1(uint x, uint y, uint z, float val)
-{
+inline uint3float1 make_uint3float1(uint x, uint y, uint z, float val) {
   return uint3float1(x, y, z, val);
 }
 inline uint3float1 make_uint3float1(uint3 c, float val) { return uint3float1(c.x, c.y, c.z, val); }
@@ -61,6 +60,7 @@ void run_aggregation(float *final_image, const uint3 size, const uint3 tsize,
                      const cudaDeviceProp &d_prop);
 
 // Helper functions
-__device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref, const int3 cmp, const int k);
+__device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref,
+                               const int3 cmp, const int k);
 
 void debug_kernel(float *tmp);

@@ -3,8 +3,7 @@
 
 #include <bm4d-gpu/bm4d.h>
 
-std::vector<uchar> BM4D::run_first_step()
-{
+std::vector<uchar> BM4D::run_first_step() {
   uchar *d_noisy_volume;
   assert(size == noisy_volume.size());
   checkCudaErrors(cudaMalloc((void **)&d_noisy_volume, sizeof(uchar) * size));
@@ -13,7 +12,7 @@ std::vector<uchar> BM4D::run_first_step()
 
   uint3 im_size = make_uint3(width, height, depth);
   uint3 tr_size =
-      make_uint3(twidth, theight, tdepth); // Truncated size, with some step for ref patches
+      make_uint3(twidth, theight, tdepth);  // Truncated size, with some step for ref patches
 
   // Do block matching
   Stopwatch blockmatching(true);
@@ -57,8 +56,7 @@ std::vector<uchar> BM4D::run_first_step()
                   d_group_weights, params, gather_stacks_sum, d_prop);
   aggregation_t.stop();
   std::cout << "Aggregation took: " << aggregation_t.getSeconds() << std::endl;
-  for (int i = 0; i < size; i++)
-  {
+  for (int i = 0; i < size; i++) {
     noisy_volume[i] = static_cast<uchar>(final_image[i]);
   }
   return noisy_volume;

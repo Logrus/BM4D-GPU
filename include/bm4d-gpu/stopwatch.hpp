@@ -15,9 +15,8 @@
 /**
  * \brief Implementation of high precision wall-time stopwatch based on system timers.
  */
-class Stopwatch
-{
-private:
+class Stopwatch {
+ private:
   typedef unsigned long long ticks_t;
 
   ticks_t mStartTime;
@@ -27,8 +26,7 @@ private:
   /**
    * \brief Get current system timer status in ticks.
    */
-  ticks_t now()
-  {
+  ticks_t now() {
 #ifdef WIN32
     LARGE_INTEGER ticks;
     ::QueryPerformanceCounter(&ticks);
@@ -43,8 +41,7 @@ private:
   /**
    * Measure current time and update mInterval.
    */
-  void measureTime()
-  {
+  void measureTime() {
 #ifdef WIN32
     LARGE_INTEGER ticks;
     ::QueryPerformanceFrequency(&ticks);
@@ -54,7 +51,7 @@ private:
 #endif
   }
 
-public:
+ public:
   /**
    * \brief Create new stopwatch. The stopwatch are not running when created.
    */
@@ -64,17 +61,14 @@ public:
    * \brief Create new stopwatch (and optionaly start it).
    * \param start If start is true, the stapwatch are started immediately.
    */
-  Stopwatch(bool start)
-  {
-    if (start)
-      this->start();
+  Stopwatch(bool start) {
+    if (start) this->start();
   }
 
   /**
    * \brief Start the stopwatch. If the stopwatch are already timing, they are reset.
    */
-  void start()
-  {
+  void start() {
     mTiming = true;
     mStartTime = now();
   }
@@ -82,10 +76,8 @@ public:
   /**
    * \brief Stop the stopwatch. Multiple invocation has no effect.
    */
-  void stop()
-  {
-    if (mTiming == false)
-      return;
+  void stop() {
+    if (mTiming == false) return;
     mTiming = false;
     measureTime();
   }
@@ -93,21 +85,17 @@ public:
   /**
    * \brief Stop and reset the stopwatch. Multiple invocation has no effect.
    */
-  void reset()
-  {
+  void reset() {
     mInterval = 0.0;
-    if (mTiming == false)
-      return;
+    if (mTiming == false) return;
     mTiming = false;
   }
 
   /**
    * \brief Return measured time in seconds.
    */
-  double getSeconds()
-  {
-    if (mTiming)
-      measureTime();
+  double getSeconds() {
+    if (mTiming) measureTime();
     return mInterval;
   }
 

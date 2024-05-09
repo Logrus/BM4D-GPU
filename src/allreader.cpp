@@ -7,19 +7,15 @@
 #define idx3(x, y, z, x_size, y_size) ((x) + ((y) + (y_size) * (z)) * (x_size))
 #endif
 
-void eat_comment(std::ifstream &f)
-{
+void eat_comment(std::ifstream &f) {
   char linebuf[1024];
   char ppp;
-  while (ppp = f.peek(), ppp == '\n' || ppp == '\r')
-    f.get();
-  if (ppp == '#')
-    f.getline(linebuf, 1023);
+  while (ppp = f.peek(), ppp == '\n' || ppp == '\r') f.get();
+  if (ppp == '#') f.getline(linebuf, 1023);
 }
 
 bool readPGM(const std::string &filename, std::vector<unsigned char> &image, int &width,
-             int &height)
-{
+             int &height) {
   std::ifstream File(filename.c_str(), std::ifstream::binary);
   int length, maxval;
   // Get size
@@ -35,15 +31,14 @@ bool readPGM(const std::string &filename, std::vector<unsigned char> &image, int
   File >> height;
   eat_comment(File);
   File >> maxval;
-  File.get();                   // Remove all excessive spaces
-  image.resize(width * height); // (Re)Initialize image from sizes
+  File.get();                    // Remove all excessive spaces
+  image.resize(width * height);  // (Re)Initialize image from sizes
   File.read(reinterpret_cast<char *>(image.data()), length);
   return true;
 }
 
 void AllReader::readSequence(const std::string &filename, std::vector<unsigned char> &volume,
-                             int &width, int &height, int &depth)
-{
+                             int &width, int &height, int &depth) {
   std::vector<std::string> input;
   std::string inputDir;
   // Determine input directory
@@ -57,20 +52,16 @@ void AllReader::readSequence(const std::string &filename, std::vector<unsigned c
   s = filename;
   s.erase(0, s.find_last_of('.'));
 
-  if (s == ".txt" || s == ".TXT")
-  {
+  if (s == ".txt" || s == ".TXT") {
     std::ifstream aStream(filename.c_str());
     aStream >> depth;
     input.resize(depth);
-    for (int i = 0; i < depth; i++)
-    {
+    for (int i = 0; i < depth; i++) {
       std::string s;
       aStream >> s;
       input.at(i) = inputDir + s;
     }
-  }
-  else
-  {
+  } else {
     std::cout << "Must pass a txt file as input" << std::endl;
     exit(1);
   }
@@ -80,16 +71,14 @@ void AllReader::readSequence(const std::string &filename, std::vector<unsigned c
   volume.reserve(width * height * depth);
   volume.insert(volume.end(), image.begin(), image.end());
   // the rest
-  for (int i = 1; i < input.size(); ++i)
-  {
+  for (int i = 1; i < input.size(); ++i) {
     readPGM(input.at(i).c_str(), image, width, height);
     volume.insert(volume.end(), image.begin(), image.end());
   }
 }
 
 void AllReader::readVideo(const std::string &filename, std::vector<unsigned char> &volume,
-                          int &width, int &height, int &depth)
-{
+                          int &width, int &height, int &depth) {
   cv::VideoCapture capture(filename);
 
   width = capture.get(cv::CAP_PROP_FRAME_WIDTH);
@@ -100,37 +89,29 @@ void AllReader::readVideo(const std::string &filename, std::vector<unsigned char
 
   cv::Mat frame;
 
-  if (!capture.isOpened())
-    throw "Error when reading file";
+  if (!capture.isOpened()) throw "Error when reading file";
 
-  for (int slice = 0;; slice++)
-  {
-    if (!capture.read(frame))
-      break;
+  for (int slice = 0;; slice++) {
+    if (!capture.read(frame)) break;
 
     for (int y = 0; y < height; ++y)
       for (int x = 0; x < width; ++x)
         volume[idx3(x, y, slice, width, height)] = frame.at<unsigned char>(y, x);
 
-    if (this->display)
-    {
+    if (this->display) {
       cv::imshow("window", frame);
       char key = cv::waitKey(10);
-      if (key == 27)
-        break; // ESC
+      if (key == 27) break;  // ESC
     }
   }
 }
 
-void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char> &volume, int &width,
-                         int &height, int &depth)
-{
-
+void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char> &volume,
+                         int &width, int &height, int &depth) {
   std::vector<cv::Mat> images;
   bool success = cv::imreadmulti(filename, images);
 
-  if (!success || images.empty())
-  {
+  if (!success || images.empty()) {
     std::cerr << "Could not open or find the image" << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -141,24 +122,20 @@ void AllReader::readTIFF(const std::string &filename, std::vector<unsigned char>
 
   volume.resize(width * height * depth);
 
-  for (int slice = 0; slice < depth; ++slice)
-  {
+  for (int slice = 0; slice < depth; ++slice) {
     for (int y = 0; y < height; ++y)
       for (int x = 0; x < width; ++x)
         volume[idx3(x, y, slice, width, height)] = images[slice].at<unsigned char>(y, x);
   }
 }
 
-void AllReader::saveTIFF(const std::string &filename, const std::vector<unsigned char> &volume, int width, int height, int depth)
-{
+void AllReader::saveTIFF(const std::string &filename, const std::vector<unsigned char> &volume,
+                         int width, int height, int depth) {
   std::vector<cv::Mat> images;
-  for (int slice = 0; slice < depth; ++slice)
-  {
+  for (int slice = 0; slice < depth; ++slice) {
     cv::Mat image(height, width, CV_8UC1);
     for (int y = 0; y < height; ++y)
-      for (int x = 0; x < width; ++x)
-      {
-
+      for (int x = 0; x < width; ++x) {
         image.at<unsigned char>(y, x) = volume[idx3(x, y, slice, width, height)];
       }
 
@@ -169,25 +146,17 @@ void AllReader::saveTIFF(const std::string &filename, const std::vector<unsigned
 }
 
 void AllReader::read(const std::string &filename, std::vector<unsigned char> &volume, int &width,
-                     int &height, int &depth)
-{
+                     int &height, int &depth) {
   // Determine extension
   std::string ext = filename;
   ext.erase(0, ext.find_last_of('.'));
-  if (ext == ".txt" || ext == ".TXT")
-  {
+  if (ext == ".txt" || ext == ".TXT") {
     readSequence(filename, volume, width, height, depth);
-  }
-  else if (ext == ".avi" || ext == ".AVI")
-  {
+  } else if (ext == ".avi" || ext == ".AVI") {
     readVideo(filename, volume, width, height, depth);
-  }
-  else if (ext == ".tiff" || ext == ".TIFF")
-  {
+  } else if (ext == ".tiff" || ext == ".TIFF") {
     readTIFF(filename, volume, width, height, depth);
-  }
-  else
-  {
+  } else {
     std::cerr << "Unknown file extension: *" << ext
               << ". Available are tiff, avi, pgm (with sequence txt file)." << std::endl;
     exit(EXIT_FAILURE);

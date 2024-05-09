@@ -3,19 +3,18 @@
 
 #pragma once
 
+#include <bm4d-gpu/parameters.h>
+
+#include <bm4d-gpu/kernels.cuh>
+#include <bm4d-gpu/stopwatch.hpp>
 #include <cmath>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <bm4d-gpu/parameters.h>
-#include <bm4d-gpu/kernels.cuh>
-#include <bm4d-gpu/stopwatch.hpp>
-
-class BM4D
-{
-public:
+class BM4D {
+ public:
   BM4D(bm4d_gpu::Parameters p, const std::vector<uchar> &in_noisy_volume, const int &width,
        const int &height, const int &depth)
       : params(p),
@@ -24,8 +23,7 @@ public:
         depth(depth),
         d_gathered4dstack(NULL),
         d_stacks(NULL),
-        d_nstacks(NULL)
-  {
+        d_nstacks(NULL) {
     noisy_volume = in_noisy_volume;
     size = width * height * depth;
     int device;
@@ -42,19 +40,15 @@ public:
     checkCudaErrors(cudaMemset(d_nstacks, 0, sizeof(uint) * tsize));
   }
 
-  inline ~BM4D()
-  {
+  inline ~BM4D() {
     // Cleanup
-    if (d_stacks)
-    {
+    if (d_stacks) {
       checkCudaErrors(cudaFree(d_stacks));
     }
-    if (d_nstacks)
-    {
+    if (d_nstacks) {
       checkCudaErrors(cudaFree(d_nstacks));
     }
-    if (d_gathered4dstack)
-    {
+    if (d_gathered4dstack) {
       checkCudaErrors(cudaFree(d_gathered4dstack));
     }
     cudaDeviceReset();
@@ -62,7 +56,7 @@ public:
 
   std::vector<unsigned char> run_first_step();
 
-private:
+ private:
   // Host variables
   std::vector<uchar> noisy_volume;
 

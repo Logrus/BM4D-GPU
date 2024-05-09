@@ -1,3 +1,4 @@
 ---
-BasedOnStyle: Microsoft
+BasedOnStyle: Google
+ColumnLimit: 100
 ---
