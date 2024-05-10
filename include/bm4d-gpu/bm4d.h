@@ -21,9 +21,9 @@ class BM4D {
         width(width),
         height(height),
         depth(depth),
-        d_gathered4dstack(NULL),
-        d_stacks(NULL),
-        d_nstacks(NULL) {
+        d_gathered4dstack(nullptr),
+        d_stacks(nullptr),
+        d_nstacks(nullptr) {
     noisy_volume = in_noisy_volume;
     size = width * height * depth;
     int device;
@@ -42,13 +42,13 @@ class BM4D {
 
   inline ~BM4D() {
     // Cleanup
-    if (d_stacks) {
+    if (d_stacks != nullptr) {
       checkCudaErrors(cudaFree(d_stacks));
     }
-    if (d_nstacks) {
+    if (d_nstacks != nullptr) {
       checkCudaErrors(cudaFree(d_nstacks));
     }
-    if (d_gathered4dstack) {
+    if (d_gathered4dstack != nullptr) {
       checkCudaErrors(cudaFree(d_gathered4dstack));
     }
     cudaDeviceReset();
