@@ -1,11 +1,9 @@
-FROM nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM nvidia/cuda:{{CUDA_VERSION}}-devel-ubuntu20.04
 
-RUN apt-get update
-
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
-    gdb \
     cmake \
+    gdb \
     git \
     libopencv-dev \
     ninja-build \
@@ -13,7 +11,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-pip \
     python3-setuptools \
     python3-wheel
-
 
 RUN python3 -m pip install --upgrade pip && \
     pip install cmake_format

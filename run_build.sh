@@ -3,5 +3,5 @@
 set -e
 set -x
 
-cmake -B build -GNinja && \
+cmake -B build -GNinja -DCMAKE_BUILD_TYPE=Release && \
 cmake --build build
