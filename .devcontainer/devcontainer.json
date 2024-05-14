@@ -1,7 +1,5 @@
 {
-    "build": {
-        "dockerfile": "Dockerfile"
-    },
+    "image": "bm4d-gpu-devenv",
     "runArgs": [
         "--gpus=all"
     ],

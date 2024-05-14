@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.16)
 project(bm4d-gpu)
 
 # Add support for C++14
@@ -42,6 +42,6 @@ if(BUILD_CLI)
   target_link_libraries(bm4d-gpu bm4d-gpu-lib ${OpenCV_LIBRARIES})
 endif()
 
-# if (BUILD_TESTS)
+if (BUILD_TESTS)
   add_subdirectory(tests)
-# endif()
+endif()

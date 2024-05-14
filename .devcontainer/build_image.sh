@@ -18,6 +18,9 @@ if [[ $(echo $CUDA_VERSION | awk -F'.' '{print NF}') -eq 2  ]]; then
     CUDA_VERSION="${CUDA_VERSION}.0"
 fi
 
+echo "Detected cuda version: $CUDA_VERSION"
+
+echo "Using base image: nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04"
 
 docker build --build-arg BASE_IMAGE=nvidia/cuda:${CUDA_VERSION}-devel-ubuntu20.04 \
              --build-arg USER_NAME=${USER} \
