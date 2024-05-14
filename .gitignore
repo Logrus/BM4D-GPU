@@ -1,3 +1,2 @@
-.devcontainer/Dockerfile
 /build/
 /data/*.tiff
