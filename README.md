@@ -34,7 +34,7 @@ In this example, cuda version is 12.2 and corresponding docker image would be `n
 
 After image is built, simply open project folder in vscode and run `Dev Containers: Open Folder in Container...`.
 
-## Build with cmake
+## Build with cmake for release
 
 Executing from root folder of a project (where CMakeLists.txt is located).
 
@@ -48,6 +48,21 @@ Alternatively, you can simply run convenience `build.sh` script.
 ```bash
 ./build.sh
 ```
+
+## Building with cmake for debug and using breakpoints
+
+If you want to be able to step through the code, run build with the following commands:
+
+```bash
+cmake -B build -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo && \
+cmake --build build
+```
+
+After that, in vscode, you should be able to launch a debug task in "Run and debug" menu (`Ctrl+Shift+D`).
+
+![run and debug from vscode](docs/images/launch_salesman_debug.png)
+
+This should give you ability to use breakpoints and step-through the program.
 
 ## Building and running tests
 
