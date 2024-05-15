@@ -1,10 +1,13 @@
 # BM4D GPU (CUDA) implementation
 
+## About project
+
+For details about project, please read included [PDF report](https://github.com/Logrus/BM4D-GPU/blob/master/bm4d.pdf).
 ## License
 
 The majority of the code is licensed under MIT license. 
 
-However, some header files are from NVIDIA and hold a different license, which is included in the header.
+However, some header files are from NVIDIA and hold a different license, which is included at the beginning of each relevant file.
 
 
 ## Working with devcontainer
