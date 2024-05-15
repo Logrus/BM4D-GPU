@@ -6,6 +6,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cmake \
     gdb \
     git \
+    git-lfs \
     libopencv-dev \
     ninja-build \
     python3-opencv \
