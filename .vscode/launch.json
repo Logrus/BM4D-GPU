@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug launch",
+            "name": "Debug bm4d-gpu with salesman example",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceRoot}/build/bm4d-gpu",
             "args": [
-                "${workspaceRoot}/data/rec62_noisy.tiff",
+                "${workspaceRoot}/data/salesman_noisy.tiff",
                 "${workspaceRoot}/data/debug_denoised.tiff",
             ],
             "stopAtEntry": false,

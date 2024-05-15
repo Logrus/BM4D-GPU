@@ -1,2 +1,3 @@
 /build/
 /data/*.tiff
+!data/salesman_noisy.tiff
