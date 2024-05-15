@@ -6,8 +6,10 @@ SCRIPT_DIR=`dirname "$0"`
 # This script tries to extract the CUDA version from the nvcc --version output
 # and then replaces the placeholder in the Dockerfile.template with the actual version.
 
-# If it fails to fuilfil its purpose,
+# If it fails to fulill its purpose,
 # you can always manually replace the placeholder with the actual version.
+# E.g. define BASE_IMAGE=nvidia/cuda:11.4.1-devel-ubuntu22.04
+# for CUDA 11.4.1
 
 nvcc_output=$(nvcc --version 2>&1)
 
