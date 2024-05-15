@@ -3,6 +3,7 @@
     "runArgs": [
         "--gpus=all"
     ],
+    "postAttachCommand": "/bin/bash",
     "customizations": {
         "vscode": {
             "extensions": [

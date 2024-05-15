@@ -16,16 +16,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 RUN python3 -m pip install --upgrade pip && \
     pip install cmake_format
 
-# SHELL ["/bin/bash", "-c"]
+ARG GROUP_NAME
+ARG USER_NAME
+RUN groupadd -r $GROUP_NAME && useradd -r -g $GROUP_NAME $USER_NAME
 
-# ARG GROUP_NAME
-# ARG USER_NAME
-# RUN groupadd -r $GROUP_NAME && useradd -r -g $GROUP_NAME $USER_NAME
+RUN mkdir -p /home/$USER_NAME && chown -R $USER_NAME:$GROUP_NAME /home/$USER_NAME
 
-# RUN mkdir -p /home/$USER_NAME && chown -R $USER_NAME:$GROUP_NAME /home/$USER_NAME
-
-# USER $USER_NAME
-
-# WORKDIR /home/$USER_NAME
-
-# CMD /bin/bash
+USER $USER_NAME
