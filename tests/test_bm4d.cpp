@@ -48,3 +48,20 @@ TEST(TestDistanceComputation, ComputeDifferentPatchWithNegativeIndex) {
   // Assert
   ASSERT_NEAR(84. / 9., distance, 0.0001);
 }
+
+TEST(TestNearestPowerOfTwo, ComputeNearestPowerOfTwo) {
+  // Arrange
+  const std::vector<uint> values = {0, 1, 2, 3, 15, 16, 17, 31, 32, 33};
+  const std::vector<uint> expected_results = {0, 1, 2, 2, 8, 16, 16, 16, 32, 32};
+
+  // Act
+  std::vector<uint> results;
+  for (const uint value : values) {
+    results.emplace_back(lower_power_2(value));
+  }
+
+  // Assert
+  for (size_t i = 0; i < values.size(); ++i) {
+    EXPECT_EQ(expected_results[i], results[i]);
+  }
+}

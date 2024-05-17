@@ -45,18 +45,8 @@ void debug_kernel(float *tmp) {
   checkCudaErrors(cudaGetLastError());
 }
 
-// Nearest lower power of 2
-__device__ __inline__ uint flp2(uint x) {
-  x = x | (x >> 1);
-  x = x | (x >> 2);
-  x = x | (x >> 4);
-  x = x | (x >> 8);
-  x = x | (x >> 16);
-  return x - (x >> 1);
-}
-
-__device__ void add_stack(uint3float1 *d_stacks, uint *d_nstacks, const uint3float1 val,
-                          const int maxN) {
+__device__ __host__ void add_stack(uint3float1 *d_stacks, uint *d_nstacks, const uint3float1 val,
+                                   const int maxN) {
   int k;
   uint num = (*d_nstacks);
   if (num < maxN)  // add new value
@@ -172,7 +162,7 @@ __global__ void k_nstack_to_pow(uint3float1 *d_stacks, uint *d_nstacks, const in
     uint groupId = i / maxN;
 
     uint n = d_nstacks[groupId];
-    uint tmp = flp2(n);
+    uint tmp = lower_power_2(n);
     uint diff = d_nstacks[groupId] - tmp;
 
     __syncthreads();
