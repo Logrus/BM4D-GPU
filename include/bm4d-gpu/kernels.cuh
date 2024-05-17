@@ -59,20 +59,26 @@ void run_aggregation(float *final_image, const uint3 size, const uint3 tsize,
                      const cudaDeviceProp &d_prop);
 
 // Helper functions
+
+/// @brief Compute the distance between two patches. include
+/// The distance is computed as the sum of the squared differences between the
+/// intensities of each pixel in patch cubes. The result is normalized by the
+/// number of pixels in the patch.
+/// $d(C^z_{x_i}, C^z_{x_j}) = \frac{1}{L^3} (C^z_{x_i} - C^z_{x_j})^2$
 __device__ __host__ float dist(const uchar *__restrict img, const uint3 size, const int3 ref,
                                const int3 cmp, const int k);
 
-// @brief Round up to the lower power of 2.
-// This function only works for 32-bit unsigned integers.
-// Example lower_power_2(5) = 4, lower_power_2(8) = 8, lower_power_2(9) = 8.
-//
-// @note It returns 0 for x = 0, which is not power of 2.
-//
-// @param x input number
-// @return nearest lower power of 2 of x
-//
-// @note Similar function that returns upper power:
-//       https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+/// @brief Round up to the lower power of 2.
+/// This function only works for 32-bit unsigned integers.
+/// Example lower_power_2(5) = 4, lower_power_2(8) = 8, lower_power_2(9) = 8.
+///
+/// @note It returns 0 for x = 0, which is not power of 2.
+///
+/// @param x input number
+/// @return nearest lower power of 2 of x
+///
+/// @note Similar function that returns upper power:
+///       https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 __device__ __host__ __inline__ uint lower_power_2(uint x) {
   x = x | (x >> 1);
   x = x | (x >> 2);

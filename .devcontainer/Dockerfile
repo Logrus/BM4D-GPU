@@ -4,6 +4,7 @@ FROM $BASE_IMAGE
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     cmake \
+    doxygen \
     gdb \
     git \
     git-lfs \
