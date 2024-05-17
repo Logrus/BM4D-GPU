@@ -6,30 +6,13 @@
     "configurations": [
         {
             "name": "Debug bm4d-gpu with salesman example",
-            "type": "cppdbg",
+            "type": "cuda-gdb",
             "request": "launch",
             "program": "${workspaceRoot}/build/bm4d-gpu",
-            "args": [
-                "${workspaceRoot}/data/salesman_noisy.tiff",
-                "${workspaceRoot}/data/debug_denoised.tiff",
-            ],
+            "args": "${workspaceRoot}/data/salesman_noisy.tiff ${workspaceRoot}/data/debug_denoised.tiff;",
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
         }
     ]
 }

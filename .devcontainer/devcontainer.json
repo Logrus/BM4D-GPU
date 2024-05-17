@@ -14,8 +14,9 @@
                 "ms-python.vscode-pylance",
                 "ms-vscode.cmake-tools",
                 "ms-vscode.cpptools",
+                "NVIDIA.nsight-vscode-edition",
                 "streetsidesoftware.code-spell-checker",
-                "twxs.cmake",
+                "twxs.cmake"
             ]
         }
     },

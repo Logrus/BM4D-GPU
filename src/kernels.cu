@@ -45,9 +45,11 @@ void debug_kernel(float *tmp) {
   checkCudaErrors(cudaGetLastError());
 }
 
+/// Add a new stack and sort it such that if patch is more similar, it should be at the top.
+/// Note that self patch is always expected to be first with value zero.
 __device__ __host__ void add_stack(uint3float1 *d_stacks, uint *d_nstacks, const uint3float1 val,
                                    const int maxN) {
-  int k;
+  int k{};
   uint num = (*d_nstacks);
   if (num < maxN)  // add new value
   {
@@ -86,8 +88,6 @@ __device__ __host__ float dist(const uchar *__restrict img, const uint3 size, co
         const int cx = max(0, min(x + cmp.x, isize.x - 1));
         const int cy = max(0, min(y + cmp.y, isize.y - 1));
         const int cz = max(0, min(z + cmp.z, isize.z - 1));
-        // printf("rx: %d ry: %d rz: %d cx: %d cy: %d cz: %d\n", rx, ry, rz, cx,
-        // cy, cz);
         const float tmp = (img[(rx) + (ry)*isize.x + (rz)*isize.x * isize.y] -
                            img[(cx) + (cy)*isize.x + (cz)*isize.x * isize.y]);
         diff += tmp * tmp * normalizer;
@@ -124,7 +124,6 @@ __global__ void k_block_matching(const uchar *__restrict img, const uint3 size, 
           for (int wy = wyb; wy <= wye; wy++)
             for (int wx = wxb; wx <= wxe; wx++) {
               float w = dist(img, size, ref, make_int3(wx, wy, wz), params.patch_size);
-              // printf("Dist %f\n", w);
 
               if (w < params.sim_th) {
                 add_stack(&d_stacks[(Idx + (Idy + Idz * tsize.y) * tsize.x) * params.maxN],

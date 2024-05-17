@@ -25,3 +25,5 @@ RUN groupadd -r $GROUP_NAME && useradd -r -g $GROUP_NAME $USER_NAME
 RUN mkdir -p /home/$USER_NAME && chown -R $USER_NAME:$GROUP_NAME /home/$USER_NAME
 
 USER $USER_NAME
+
+ENV PATH="/usr/local/cuda/bin/:${PATH}"
